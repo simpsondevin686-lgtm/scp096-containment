@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>SCP-096 // CONTAINMENT CELL</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;
+    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    touch-action:none;user-select:none;-webkit-user-select:none;overscroll-behavior:none;}
+  #glcanvas{position:fixed;inset:0;display:block;width:100%;height:100%;}
+  #ui{position:fixed;inset:0;pointer-events:none;z-index:10;}
+  #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;
+    border-radius:50%;background:rgba(0,255,102,.75);box-shadow:0 0 10px rgba(0,255,102,.9);}
+  #hud{position:absolute;left:16px;top:calc(16px + env(safe-area-inset-top));
+    font-size:11px;color:rgba(0,255,102,.55);letter-spacing:2.5px;line-height:1.8;
+    text-shadow:0 0 8px rgba(0,255,102,.4);}
+  #hud b{color:#00ff66;font-weight:700;}
+  #stick{position:absolute;width:150px;height:150px;border-radius:50%;
+    border:2px solid rgba(0,255,102,.3);background:rgba(0,255,102,.045);
+    transform:translate(-50%,-50%);display:none;}
+  #knob{position:absolute;left:50%;top:50%;width:64px;height:64px;border-radius:50%;
+    background:rgba(0,255,102,.22);border:2px solid rgba(0,255,102,.75);
+    transform:translate(-50%,-50%);box-shadow:0 0 16px rgba(0,255,102,.35);}
+  #eyes{position:absolute;right:22px;bottom:calc(34px + env(safe-area-inset-bottom));
+    width:112px;height:112px;border-radius:50%;border:2px solid rgba(0,255,102,.55);
+    background:rgba(0,18,9,.6);color:#00ff66;font-size:13px;font-weight:800;
+    letter-spacing:1.5px;line-height:1.25;display:flex;align-items:center;
+    justify-content:center;text-align:center;pointer-events:auto;
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    transition:box-shadow .15s,background .15s;}
+  #eyes:active{background:rgba(0,255,102,.22);}
+  #eyes.closed{background:rgba(0,255,102,.12);box-shadow:0 0 30px rgba(0,255,102,.75),inset 0 0 20px rgba(0,255,102,.3);}
+  #lookback{position:absolute;right:22px;bottom:calc(170px + env(safe-area-inset-bottom));
+    width:88px;height:88px;border-radius:50%;border:2px solid rgba(0,255,102,.55);
+    background:rgba(0,18,9,.6);color:#00ff66;font-size:12px;font-weight:800;
+    letter-spacing:1.5px;line-height:1.25;display:flex;align-items:center;
+    justify-content:center;text-align:center;pointer-events:auto;
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    transition:box-shadow .15s,background .15s;}
+  #lookback:active{background:rgba(0,255,102,.22);}
+  #lookback.active{background:rgba(0,255,102,.22);box-shadow:0 0 24px rgba(0,255,102,.7),inset 0 0 14px rgba(0,255,102,.3);border-color:#00ff66;}
+  #danger{position:absolute;inset:0;opacity:0;transition:opacity .25s;
+    background:radial-gradient(circle at 50% 50%,transparent 25%,rgba(255,0,0,.55) 100%);}
+  #warning{position:absolute;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);color:#ff3030;font-size:13px;font-weight:800;
+    letter-spacing:3px;text-shadow:0 0 14px rgba(255,40,40,0.9);
+    opacity:0;transition:opacity 0.35s;pointer-events:none;text-align:center;
+    z-index:15;white-space:nowrap;}
+  #warning.show{opacity:1;}
+  #msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:16px;color:#ff2222;font-size:24px;font-weight:800;
+    letter-spacing:5px;opacity:0;pointer-events:none;transition:opacity .35s;
+    background:rgba(0,0,0,.9);text-align:center;padding:0 20px;}
+  #msg.show{opacity:1;pointer-events:auto;}
+  #msg small{color:#777;font-size:11px;letter-spacing:3px;font-weight:400;}
+  #tapstart{position:fixed;inset:0;background:#000;display:flex;align-items:center;
+    justify-content:center;flex-direction:column;gap:16px;color:#00ff66;
+    font-size:12px;letter-spacing:3px;z-index:50;text-align:center;padding:24px;}
+  #tapstart .t{font-size:32px;font-weight:800;letter-spacing:10px;
+    text-shadow:0 0 24px rgba(0,255,102,.6);}
+  #tapstart .s{color:#0a8;font-size:10.5px;max-width:340px;line-height:2;letter-spacing:2px;}
+  #chat-container{position:absolute;left:10px;bottom:calc(60px + env(safe-area-inset-bottom));width:260px;height:150px;display:flex;flex-direction:column;pointer-events:none;z-index:20;}
+  #chat-messages{flex:1;overflow-y:auto;color:#0f0;font-size:11px;font-family:monospace;text-shadow:1px 1px 2px #000;margin-bottom:5px;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;}
+  #chat-input{background:rgba(0,0,0,0.5);border:1px solid #0f0;color:#0f0;padding:4px 8px;font-size:12px;border-radius:4px;outline:none;pointer-events:auto;display:none;}
+  #chat-toggle{position:absolute;left:10px;bottom:calc(16px + env(safe-area-inset-bottom));background:rgba(0,255,102,.1);border:1px solid #00ff66;color:#00ff66;padding:4px 8px;border-radius:4px;font-size:11px;pointer-events:auto;}
+  #tapstart .go{margin-top:24px;padding:14px 34px;border:1px solid #00ff66;border-radius:3px;
+    animation:pulse 2s infinite;}
+  #username-stage{opacity:0;pointer-events:none;transition:opacity .8s ease;display:flex;
+    flex-direction:column;gap:14px;align-items:center;margin-top:8px;}
+  #username-stage.show{opacity:1;pointer-events:auto;}
+  #username-input{background:rgba(0,0,0,0.6);border:1px solid #00ff66;color:#00ff66;
+    padding:10px 18px;font-size:13px;letter-spacing:3px;text-align:center;
+    outline:none;border-radius:3px;width:220px;font-family:inherit;
+    -webkit-user-select:text;user-select:text;touch-action:manipulation;}
+  #play-btn{opacity:0.35;pointer-events:none;transition:opacity .35s;animation:none;}
+  #play-btn.ready{opacity:1;pointer-events:auto;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  #update-banner{position:absolute;left:50%;top:calc(60px + env(safe-area-inset-top));
+    transform:translateX(-50%);max-width:90vw;background:rgba(20,10,0,0.94);
+    border:1px solid #ffaa00;color:#ffcc44;padding:10px 18px;border-radius:4px;
+    font-size:12px;letter-spacing:1.5px;line-height:1.6;text-align:center;
+    pointer-events:none;opacity:0;transition:opacity 0.4s;z-index:30;
+    box-shadow:0 0 20px rgba(255,170,0,0.5);}
+  #update-banner.show{opacity:1;}
+  #update-banner.manual{pointer-events:auto;cursor:pointer;border-color:#ff3030;
+    color:#ff7777;box-shadow:0 0 20px rgba(255,48,48,0.6);}
+  #coins{position:absolute;right:16px;top:calc(16px + env(safe-area-inset-top));
+    background:rgba(20,15,0,0.7);border:1px solid #ffcc00;color:#ffcc00;
+    padding:6px 12px;border-radius:4px;font-size:14px;font-weight:800;
+    letter-spacing:1px;text-shadow:0 0 8px rgba(255,204,0,0.6);
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+  #stungun{position:absolute;right:16px;top:calc(64px + env(safe-area-inset-top));
+    width:76px;height:76px;border-radius:50%;border:2px solid rgba(100,200,255,0.6);
+    background:rgba(0,20,40,0.65);color:#66ddff;font-size:11px;font-weight:800;
+    letter-spacing:1px;line-height:1.2;display:flex;align-items:center;
+    justify-content:center;text-align:center;pointer-events:auto;
+    -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    transition:box-shadow .15s,background .15s;user-select:none;-webkit-user-select:none;}
+  #stungun.disabled{opacity:0.35;pointer-events:none;border-color:rgba(100,200,255,0.25);}
+  #stungun.active{box-shadow:0 0 24px rgba(100,200,255,0.85),inset 0 0 14px rgba(100,200,255,0.3);border-color:#66ddff;}
+  #stungun:active{background:rgba(100,200,255,0.25);}
+  #stun-flash{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 50% 50%,rgba(100,200,255,0.75) 0%,transparent 70%);
+    opacity:0;transition:opacity 0.15s;z-index:8;}
+
+  #leaderboard { position: absolute; left: 16px; top: 80px; background: rgba(0,20,10,0.7); border: 1px solid #00ff66; border-radius: 4px; color: #00ff66; font-family: monospace; font-size: 11px; padding: 10px; width: 180px; pointer-events: auto; transition: height 0.3s; overflow: hidden; }
+  #leaderboard.minimized { height: 30px; padding: 6px 10px; }
+  #lb-header { display: flex; justify-content: space-between; cursor: pointer; font-weight: bold; border-bottom: 1px solid rgba(0,255,102,0.3); padding-bottom: 4px; margin-bottom: 4px; }
+  #lb-list { display: flex; flex-direction: column; gap: 4px; }
+
+  #thirdperson { position: absolute; right: 16px; top: calc(150px + env(safe-area-inset-top)); width: 76px; height: 76px; border-radius: 50%; border: 2px solid rgba(0,255,102,0.6); background: rgba(0,20,10,0.65); color: #00ff66; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-align: center; pointer-events: auto; user-select: none; -webkit-user-select: none; }
+  #thirdperson:active { background: rgba(0,255,102,0.3); }
+</style>
+</head>
+<body>
+
+<div id="tapstart">
+  <div class="t">SCP-096</div>
+  <div>CONTAINMENT CELL · SITE-19</div>
+  <div class="s" id="instr-text">TOUCH LEFT SIDE TO MOVE<br>DRAG RIGHT SIDE TO LOOK<br>DO NOT LOOK AT ITS FACE</div>
+<script>
+  if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) {
+      document.getElementById('instr-text').innerHTML = 'WASD TO MOVE · MOUSE TO LOOK<br>SPACE TO TURN · B TO BUY · F TO FIRE<br>DO NOT LOOK AT ITS FACE';
+  }
+</script>
+  <div class="go" id="tapstart-go">TAP TO ENTER</div>
+  <div id="username-stage">
+    <div class="s" style="margin-bottom:4px;">ENTER YOUR NAME</div>
+    <input id="username-input" type="text" maxlength="16" placeholder="USERNAME"
+      autocomplete="off" enterkeyhint="go"/>
+    <div class="go" id="play-btn">PLAY</div>
+  </div>
+</div>
+
+<div id="ui">
+  <div id="cross"></div>
+  <div id="hud">SCP-096<br><b id="state">DORMANT</b></div>
+  <div id="leaderboard"><div id="lb-header" onclick="document.getElementById(\'leaderboard\').classList.toggle(\'minimized\')"><span>LEADERBOARD</span><span>▼</span></div><div id="lb-list"></div></div>
+  <div id="danger"></div>
+  <div id="warning">He's standing up.</div>
+  <div id="stick"><div id="knob"></div></div>
+  <div id="eyes">CLOSE<br>EYES</div>
+  <div id="lookback">LOOK<br>BACK</div>
+  <div id="msg"></div>
+  <div id="chat-container"><div id="chat-messages"></div><input id="chat-input" type="text" placeholder="Type to chat..." autocomplete="off"></div>
+  <div id="chat-toggle">CHAT</div>
+  <div id="update-banner"></div>
+  <div id="coins">🪙 <span id="coin-count">0</span></div>
+  <div id="stungun">BUY<br>50</div>
+  <div id="thirdperson" onclick="window.isThirdPerson = !window.isThirdPerson; this.style.color = window.isThirdPerson ? '#00ff66' : '#0a8'; event.stopPropagation();">3RD<br>VIEW</div>
+  <div id="stun-flash"></div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script type="module">
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import { Brain } from './behaviors.js';
+window.Brain = Brain;
+import { Controls } from './controls.js';
+window.Controls = Controls;
+
+window.onerror = function(msg, url, line, col, error) {
+    const errDiv = document.createElement('div');
+    errDiv.style.position = 'fixed';
+    errDiv.style.top = '0';
+    errDiv.style.left = '0';
+    errDiv.style.width = '100%';
+    errDiv.style.background = 'red';
+    errDiv.style.color = 'white';
+    errDiv.style.zIndex = '9999';
+    errDiv.style.padding = '10px';
+    errDiv.style.fontSize = '14px';
+    errDiv.innerText = 'ERROR: ' + msg + ' at line ' + line;
+    document.body.appendChild(errDiv);
+};
+
+
+// ─── MULTIPLAYER NETWORKING ───
+import { Network } from './network.js';
+import { Entities } from './entities.js';
+window.Entities = Entities;
+import { World } from './world.js';
+
+window.onNetworkReady = (isHost) => {
+    const hud = document.getElementById('hud');
+    if (hud) hud.innerHTML = 'SCP-096<br><b id="state">DORMANT</b><br><span style="color:#0a8;font-size:9px;">' + (Network.isHost ? 'HOST' : 'CLIENT') + ' '+Network.roomNum+'</span>';
+};
+
+window.handleData = (data, senderConn) => {
+    if (data.type === 'ping') { if (senderConn) senderConn.send({ type: 'pong', t: data.t }); return; }
+    if (data.type === 'pong') { if (senderConn) senderConn.latency = Date.now() - data.t; return; }
+    if (data.type === 'pings') { Network._lastPings = data.pings; return; }
+    
+    if (data.type === 'state') {
+        if (data.id === Network.myId) return;
+        if (!Network.remotePlayers[data.id]) {
+            const mesh = new THREE.Group();
+            const pOrange = new THREE.MeshStandardMaterial({color:0xff6a1a, roughness:0.85});
+            const pSkin = new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75});
+            const pBoot = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.7});
+            const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
+            torso.position.y = 1.20; mesh.add(torso);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), pSkin);
+            head.position.y = 1.55; mesh.add(head);
+            const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 4, 8), pOrange);
+            armL.position.set(-0.25, 1.2, 0); armL.rotation.z = 0.1; mesh.add(armL);
+            const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 4, 8), pOrange);
+            armR.position.set(0.25, 1.2, 0); armR.rotation.z = -0.1; mesh.add(armR);
+            const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pOrange);
+            legL.position.set(-0.1, 0.6, 0); mesh.add(legL);
+            const legR = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pOrange);
+            legR.position.set(0.1, 0.6, 0); mesh.add(legR);
+            const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.25), pBoot);
+            bootL.position.set(-0.1, 0.2, -0.05); mesh.add(bootL);
+            const bootR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.25), pBoot);
+            bootR.position.set(0.1, 0.2, -0.05); mesh.add(bootR);
+            scene.add(mesh);
+            Network.remotePlayers[data.id] = { mesh, data: {} };
+        }
+        Network.remotePlayers[data.id].data = data;
+        
+        if (Network.aiAuthority) {
+            const cid = data.id, now = Date.now();
+            if (Network._lastSeenTime[cid] === undefined) {
+                Network._lastSeenTime[cid] = now;
+                Network._lastSeenCoins[cid] = data.coins || 0;
+                Network._lastSeenHasStun[cid] = data.hasStunGun || false;
+                Network._lastSeenCooldown[cid] = data.cooldown || 0;
+            } else {
+                const dt = (now - Network._lastSeenTime[cid]) / 1000;
+                const maxEarn = dt * 0.34 + 0.5, delta = (data.coins || 0) - Network._lastSeenCoins[cid];
+                let cheat = false;
+                if (delta > maxEarn) cheat = true;
+                if (data.hasStunGun && !Network._lastSeenHasStun[cid] && delta > -50 + maxEarn) cheat = true;
+                if (cheat) {
+                    const conn = Network.conns.find(c => c.peer === cid);
+                    if (conn) conn.send({ type: 'rollbackCoins', targetId: cid, coins: Network._lastSeenCoins[cid], hasStunGun: Network._lastSeenHasStun[cid], cooldown: Network._lastSeenCooldown[cid] });
+                } else {
+                    Network._lastSeenCoins[cid] = data.coins; Network._lastSeenTime[cid] = now;
+                    Network._lastSeenHasStun[cid] = data.hasStunGun; Network._lastSeenCooldown[cid] = data.cooldown;
+                }
+            }
+        }
+    } else if (data.type === 'rollbackCoins') {
+        if (data.targetId === Network.myId) { coins = data.coins; hasStunGun = data.hasStunGun; lastStungunBuy = data.cooldown; saveCoins(); saveStunGun(); _lastCoinDisplay = -1; _lastStungunState = ''; showWarning("Sanity Check: Reverted Coins"); }
+    } else if (data.type === 'scpControl') {
+        window.isScpControlled = true;
+        window.scpControllerId = data.id;
+        Brain.phase = 'controlled';
+    } else if (data.type === 'scpControlRelease') {
+        window.scpControlState = null;
+        window.scpControllerId = null;
+        Brain.phase = 'dormant';
+    } else if (data.type === 'scpControl') {
+        window.scpControlState = data.state;
+        window.scpControllerId = data.id;
+        if (data.state === 'gettingUp') {
+            Brain.phase = 'standup'; Brain.standupDuration = 4.0; Brain.phaseTimer = 4.0; Brain.isTriggered = false;
+        }
+    } else if (data.type === 'scpControlRelease') {
+        window.scpControlState = null;
+        window.scpControllerId = null;
+    } else if (data.type === 'trigger') {
+        Network.scpTargetId = data.id; Brain.trigger();
+    } else if (data.type === 'windupStart') {
+        if (!Network.aiAuthority) gradualScream.start();
+    } else if (data.type === 'deathStart') {
+        if (data.victimId === Network.myId) return;
+        const rp = Network.remotePlayers[data.victimId];
+        if (!rp) return;
+        rp.data.deathAnim = { t: 0, startX: data.px, startZ: data.pz, throwX: data.tx, throwZ: data.tz };
+        if (!rp.headMesh) { rp.headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75})); scene.add(rp.headMesh); }
+        if (!rp.bloodPool) { rp.bloodPool = new THREE.Mesh(new THREE.CircleGeometry(0.9, 24), new THREE.MeshBasicMaterial({color:0x3a0000, transparent:true, opacity:0.85})); rp.bloodPool.rotation.x = -Math.PI/2; rp.bloodPool.position.set(data.px, 0.02, data.pz); scene.add(rp.bloodPool); }
+    } else if (data.type === 'stunHit') {
+        if (Network.aiAuthority) applyStun();
+    } else if (data.type === 'killTarget') {
+        if (Network.aiAuthority) Network.scpCooldown = 5.0;
+        if (data.id === Network.myId) killPlayer();
+        Network.scpTargetId = null; Brain.phase = 'returning'; Brain.phaseTimer = 15;
+    } else if (data.type === 'reset') {
+        Network.scpTargetId = null; Brain.phase = 'dormant'; Brain.phaseTimer = 0;
+    } else if (data.type === 'transferAuth') {
+        if (Network.isHost || Network.aiAuthority) return;
+        window.scp.pos.x = data.snapshot.pos.x; window.scp.pos.z = data.snapshot.pos.z; window.scp.yaw = data.snapshot.yaw;
+        window.scp._punchCooldown = data.snapshot.punchCooldown; Brain.phase = data.snapshot.phase; Brain.phaseTimer = data.snapshot.phaseTimer;
+        Brain.windupDuration = data.snapshot.windupDuration; Brain.mem = data.snapshot.mem;
+        if (data.snapshot.walkTarget) Brain.walkTarget = data.snapshot.walkTarget;
+        Network.scpTargetId = data.snapshot.targetId; Network.aiAuthority = true;
+    } else if (data.type === 'reclaimAuth') {
+        if (Network.isHost) return;
+        Network.aiAuthority = false;
+    } else if (data.type === 'scpState') {
+        if (Network.aiAuthority) return;
+        const _prevPhase = Brain.phase;
+        window.scp.pos.x = data.px; window.scp.pos.z = data.pz; window.scp.yaw = data.yaw;
+        Brain.phase = data.phase; Brain.phaseTimer = data.phaseTimer;
+        Brain.punchTimer = data.punchTimer || 0; Brain.punchSide = data.punchSide || 1;
+        Entities.root.position.copy(window.scp.pos); Entities.root.rotation.y = window.scp.yaw;
+        if (_prevPhase !== 'stunned' && data.phase === 'stunned') applyStunVisual();
+    } else if (data.type === 'punchHit') {
+        if (data.targetId === Network.myId) knockbackVel.set(data.vx, 0, data.vz);
+    } else if (data.type === 'chaseStart') {
+        if (!Network.aiAuthority) { Brain.phase = 'chase'; try { gradualScream.stop(); } catch(e){} }
+    } else if (data.type === 'megaScream') {
+        gradualScream.stop(); screamMega();
+    } else if (data.type === 'standupWarning') {
+        showWarning("He's standing up.");
+    } else if (data.type === 'chat') {
+        appendChat(data.name || data.id, data.text);
+    }
+};
+// ─── END NETWORKING ───
+
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+let currentPixelRatio = Math.min(window.devicePixelRatio, 1.75);
+renderer.setPixelRatio(currentPixelRatio);
+let _fpsFrames = 0;
+let _fpsTime = 0;
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.domElement.id = 'glcanvas';
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+window.scene = scene;
+const BLACK = new THREE.Color(0x000000);
+scene.background = new THREE.Color(0x05070a);
+const FOG = new THREE.FogExp2(0x05070a, 0.048);
+scene.fog = FOG;
+
+const camera = new THREE.PerspectiveCamera(74, innerWidth/innerHeight, 0.05, 220);
+camera.rotation.order = 'YXZ';
+
+const CHASE_SPEED_SCP = window.CHASE_SPEED_SCP = 14;
+const CHASE_SPEED_PLAYER = window.CHASE_SPEED_PLAYER = 15;
+const RETURN_SPEED = window.RETURN_SPEED = 50;
+
+const player = {
+  pos: new THREE.Vector3(0, 1.65, -13.5),
+  yaw: Math.PI,
+  pitch: 0,
+  flipOffset: 0
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+World.init(scene);
+
+Entities.init(scene);
+
+// ─── FIRST-PERSON PLAYER BODY (orange Class-D) ───
+const playerBody = new THREE.Group();
+scene.add(playerBody);
+
+const pOrange = new THREE.MeshStandardMaterial({color:0xff6a1a, roughness:0.85, metalness:0.0});
+const pOrangeDark = new THREE.MeshStandardMaterial({color:0xc84a0a, roughness:0.9});
+const pSkin = new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75});
+const pBoot = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.7});
+
+const pTorso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
+pTorso.position.y = 1.20;
+playerBody.add(pTorso);
+
+const pBelt = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.07, 12), pOrangeDark);
+pBelt.position.y = 0.96;
+playerBody.add(pBelt);
+
+const pHips = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.16, 5, 10), pOrange);
+pHips.position.y = 0.88;
+playerBody.add(pHips);
+
+function buildPlayerLeg(side){
+  const hipG = new THREE.Group();
+  hipG.position.set(side*0.10, 0.90, 0);
+  playerBody.add(hipG);
+  const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.23, 5, 8), pOrange);
+  thigh.position.y = -0.205;
+  hipG.add(thigh);
+  const kneeG = new THREE.Group();
+  kneeG.position.y = -0.41;
+  hipG.add(kneeG);
+  const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.29, 5, 8), pOrange);
+  shin.position.y = -0.22;
+  kneeG.add(shin);
+  const foot = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.08, 0.24), pBoot);
+  foot.position.set(0, -0.45, -0.06);
+  kneeG.add(foot);
+  return { hipG, kneeG };
+}
+const pLegL = buildPlayerLeg(-1);
+const pLegR = buildPlayerLeg(1);
+
+function buildPlayerArm(side){
+  const shoulderG = new THREE.Group();
+  shoulderG.position.set(side*0.25, 1.40, 0.1);
+  shoulderG.rotation.z = side * 0.05;
+  playerBody.add(shoulderG);
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), pOrange);
+  shoulderG.add(cap);
+  const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.16, 5, 8), pOrange);
+  upper.position.y = -0.15;
+  shoulderG.add(upper);
+  const elbowG = new THREE.Group();
+  elbowG.position.y = -0.30;
+  shoulderG.add(elbowG);
+  const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.15, 5, 8), pOrange);
+  fore.position.y = -0.14;
+  elbowG.add(fore);
+  const hand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), pSkin);
+  hand.scale.set(1, 1.3, 0.7);
+  hand.position.y = -0.30;
+  elbowG.add(hand);
+  return { shoulderG, elbowG };
+}
+const pArmL = buildPlayerArm(-1);
+const pArmR = buildPlayerArm(1);
+
+let walkPhase = 0;
+let walkAmount = 0;
+
+const REST = {
+  pelvisY:1.30, spineX:0,
+  neckX:0, neckY:0, neckZ:0,
+  headX:0, headY:0,
+  shLX:0, shLZ:0, elLX:0,
+  shRX:0, shRZ:0, elRX:0,
+  hiLX:0, knLX:0, hiRX:0, knRX:0,
+  jaw:0
+};
+const cur = Object.assign({}, REST);
+
+let actx = null, master = null, noiseBuf = null, breathGain = null;
+
+function distCurve(k){
+  const n = 1024, c = new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const x = i*2/n - 1;
+    c[i] = (1+k)*x / (1 + k*Math.abs(x));
+  }
+  return c;
+}
+
+function cleanup(node, ...nodes) {
+  if (!node) return;
+  node.onended = () => { try { node.disconnect(); nodes.forEach(n => n.disconnect()); } catch(e){} };
+}
+function initAudio(){
+  if(actx) return;
+  try{
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+  }catch(e){ return; }
+  master = actx.createGain();
+  master.gain.value = 0.62;
+  const limiter = actx.createDynamicsCompressor();
+  limiter.threshold.value = -10;
+  limiter.knee.value = 8;
+  limiter.ratio.value = 12;
+  limiter.attack.value = 0.003;
+  limiter.release.value = 0.25;
+  master.connect(limiter);
+  limiter.connect(actx.destination);
+
+  const len = actx.sampleRate * 2;
+  noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i] = Math.random()*2 - 1;
+
+  const o1 = actx.createOscillator(); o1.type='sine'; o1.frequency.value = 46;
+  const o2 = actx.createOscillator(); o2.type='sine'; o2.frequency.value = 69.4;
+  const g1 = actx.createGain(); g1.gain.value = 0.05;
+  o1.connect(g1); o2.connect(g1); g1.connect(master);
+  o1.start(); o2.start();
+
+  const n = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  const nf = actx.createBiquadFilter(); nf.type='lowpass'; nf.frequency.value = 340;
+  const ng = actx.createGain(); ng.gain.value = 0.028;
+  n.connect(nf); nf.connect(ng); ng.connect(master); n.start();
+
+  const bn = actx.createBufferSource(); bn.buffer = noiseBuf; bn.loop = true;
+  const bf = actx.createBiquadFilter(); bf.type='bandpass'; bf.frequency.value = 620; bf.Q.value = 0.9;
+  breathGain = actx.createGain(); breathGain.gain.value = 0.012;
+  const lfo = actx.createOscillator(); lfo.type='sine'; lfo.frequency.value = 0.32;
+  const lfoG = actx.createGain(); lfoG.gain.value = 0.030;
+  lfo.connect(lfoG); lfoG.connect(breathGain.gain);
+  bn.connect(bf); bf.connect(breathGain); breathGain.connect(master);
+  bn.start(); lfo.start();
+}
+
+window.growl = growl;
+function growl(intensity=1){
+  if(!actx) return;
+  const t = actx.currentTime;
+  if(actx._lastGrowl && t - actx._lastGrowl < 0.22) return;
+  actx._lastGrowl = t;
+  const o = actx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(62 + Math.random()*34, t);
+  o.frequency.exponentialRampToValueAtTime(38, t + 0.75);
+
+  const ws = actx.createWaveShaper(); ws.curve = distCurve(28); ws.oversample='2x';
+  const f = actx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 640; f.Q.value = 1.4;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.26*intensity, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
+
+  o.connect(ws); ws.connect(f); f.connect(g); g.connect(master);
+  cleanup(o, ws, f, g);
+  o.start(t); o.stop(t + 0.9);
+}
+
+function scream(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  const dur = 2.2;
+
+  // Envelope
+  const env = actx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(0.70, t + 0.05);
+  env.gain.setValueAtTime(0.65, t + 1.20);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  env.connect(master);
+
+  const shaper = actx.createWaveShaper();
+  shaper.curve = distCurve(140);
+  shaper.oversample = '4x';
+  shaper.connect(env);
+
+  // Fundamental voice
+  const osc = actx.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(420, t);
+  osc.frequency.exponentialRampToValueAtTime(940, t + 0.20);
+  osc.frequency.exponentialRampToValueAtTime(600, t + 0.90);
+  osc.frequency.linearRampToValueAtTime(520, t + dur);
+
+  // Vibrato — vital for scream quality
+  const vib = actx.createOscillator(); vib.type = 'sine'; vib.frequency.value = 6.4;
+  const vibG = actx.createGain(); vibG.gain.value = 24;
+  vib.connect(vibG); vibG.connect(osc.frequency);
+
+  // Secondary voice a fifth above (richness)
+  const osc2 = actx.createOscillator(); osc2.type = 'sawtooth';
+  osc2.frequency.setValueAtTime(630, t);
+  osc2.frequency.exponentialRampToValueAtTime(1410, t + 0.20);
+  osc2.frequency.exponentialRampToValueAtTime(900, t + 0.90);
+  osc2.frequency.linearRampToValueAtTime(780, t + dur);
+
+  const srcG = actx.createGain(); srcG.gain.value = 0.5;
+  osc.connect(srcG);
+  const src2G = actx.createGain(); src2G.gain.value = 0.28;
+  osc2.connect(src2G);
+
+  // Vowel formants ("AAAH")
+  const formants = [
+    { f: 780,  q: 7,  g: 1.2 },
+    { f: 1180, q: 9,  g: 0.85 },
+    { f: 2750, q: 11, g: 0.42 },
+    { f: 3600, q: 14, g: 0.20 },
+  ];
+  for (const fm of formants){
+    const bp = actx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = fm.f;
+    bp.Q.value = fm.q;
+    const g = actx.createGain(); g.gain.value = fm.g;
+    srcG.connect(bp); src2G.connect(bp);
+    bp.connect(g); g.connect(shaper);
+  }
+  // Slight dry signal to keep it "voice-like"
+  srcG.connect(shaper);
+  src2G.connect(shaper);
+
+  // Breath / rasp noise
+  const noise = actx.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
+  const nf = actx.createBiquadFilter();
+  nf.type = 'bandpass'; nf.frequency.value = 2400; nf.Q.value = 1.2;
+  const ng = actx.createGain(); ng.gain.value = 0.36;
+  noise.connect(nf); nf.connect(ng); ng.connect(shaper);
+
+  cleanup(osc, osc2, vib, noise, shaper, env, srcG, src2G);
+  osc.start(t);  osc.stop(t + dur + 0.1);
+  osc2.start(t); osc2.stop(t + dur + 0.1);
+  vib.start(t);  vib.stop(t + dur + 0.1);
+  noise.start(t); noise.stop(t + dur + 0.1);
+}
+
+window.screamMega = screamMega;
+function screamMega(){
+  // The final scream: louder, longer, harsher, with sub-bass.
+  if (!actx) return;
+  const t = actx.currentTime;
+  const dur = 3.4;
+
+  const env = actx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(1.00, t + 0.05);
+  env.gain.setValueAtTime(0.95, t + 1.80);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  env.connect(master);
+
+  const shaper = actx.createWaveShaper();
+  shaper.curve = distCurve(180);
+  shaper.oversample = '4x';
+  shaper.connect(env);
+
+  // Build a stack of related voices
+  const voices = [
+    { f0: 380, f5: 570,  g: 0.28 },
+    { f0: 540, f5: 810,  g: 0.20 },
+    { f0: 760, f5: 1140, g: 0.14 },
+  ];
+
+  let mainOsc = null;
+  for (const v of voices){
+    const o = actx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(v.f0, t);
+    o.frequency.exponentialRampToValueAtTime(v.f0 * 2.3, t + 0.35);
+    o.frequency.exponentialRampToValueAtTime(v.f0 * 1.4, t + 3.0);
+
+    const o2 = actx.createOscillator(); o2.type = 'sawtooth';
+    o2.frequency.setValueAtTime(v.f5, t);
+    o2.frequency.exponentialRampToValueAtTime(v.f5 * 2.3, t + 0.35);
+    o2.frequency.exponentialRampToValueAtTime(v.f5 * 1.4, t + 3.0);
+
+    const g = actx.createGain(); g.gain.value = v.g;
+    o.connect(g); o2.connect(g);
+
+    if (!mainOsc) mainOsc = o;
+
+    // Route each voice through the formant bank
+    const formants = [
+      { f: 800,  q: 6,  g: 1.3 },
+      { f: 1200, q: 8,  g: 1.0 },
+      { f: 2700, q: 10, g: 0.55 },
+      { f: 3700, q: 12, g: 0.28 },
+    ];
+    for (const fm of formants){
+      const bp = actx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = fm.f;
+      bp.Q.value = fm.q;
+      const fg = actx.createGain(); fg.gain.value = fm.g;
+      g.connect(bp); bp.connect(fg); fg.connect(shaper);
+    }
+    // Dry
+    g.connect(shaper);
+
+    cleanup(o, o2, g);
+    o.start(t);  o.stop(t + dur + 0.1);
+    o2.start(t); o2.stop(t + dur + 0.1);
+  }
+
+  // Vibrato on the primary voice
+  if (mainOsc){
+    const vib = actx.createOscillator(); vib.type = 'sine'; vib.frequency.value = 7.0;
+    const vibG = actx.createGain(); vibG.gain.value = 30;
+    vib.connect(vibG); vibG.connect(mainOsc.frequency);
+    cleanup(vib, vibG);
+    vib.start(t); vib.stop(t + dur + 0.1);
+  }
+
+  // Breath noise
+  const noise = actx.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
+  const nf = actx.createBiquadFilter();
+  nf.type = 'bandpass'; nf.frequency.value = 2500; nf.Q.value = 1.0;
+  const ng = actx.createGain(); ng.gain.value = 0.45;
+  noise.connect(nf); nf.connect(ng); ng.connect(shaper);
+  cleanup(noise, nf, ng);
+  noise.start(t); noise.stop(t + dur + 0.1);
+
+  // Sub-bass impact
+  const sub = actx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 48;
+  const subG = actx.createGain();
+  subG.gain.setValueAtTime(0.0001, t);
+  subG.gain.exponentialRampToValueAtTime(0.22, t + 0.10);
+  subG.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  sub.connect(subG); subG.connect(master);
+  cleanup(sub, subG);
+  sub.start(t); sub.stop(t + dur + 0.1);
+}
+
+window.randomYell = randomYell;
+function randomYell(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  if(actx._lastYell && t - actx._lastYell < 0.35) return;
+  actx._lastYell = t;
+  const dur = 0.4 + Math.random() * 0.9;
+  const base = 400 + Math.random() * 500;
+
+  const env = actx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(0.28 + Math.random() * 0.15, t + 0.03);
+  env.gain.setValueAtTime(0.26, t + dur * 0.7);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  env.connect(master);
+
+  const shaper = actx.createWaveShaper();
+  shaper.curve = distCurve(110);
+  shaper.oversample = '4x';
+  shaper.connect(env);
+
+  const osc = actx.createOscillator(); osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(base * 0.8, t);
+  osc.frequency.exponentialRampToValueAtTime(base * 1.8, t + dur * 0.25);
+  osc.frequency.exponentialRampToValueAtTime(base * 0.9, t + dur);
+
+  const vib = actx.createOscillator(); vib.type = 'sine'; vib.frequency.value = 7.0;
+  const vibG = actx.createGain(); vibG.gain.value = 15;
+  vib.connect(vibG); vibG.connect(osc.frequency);
+
+  const srcG = actx.createGain(); srcG.gain.value = 0.6;
+  osc.connect(srcG);
+
+  // Loose formants that follow the pitch roughly
+  const formants = [
+    { f: base * 2.2, q: 8,  g: 1.1 },
+    { f: base * 3.4, q: 10, g: 0.65 },
+    { f: 2600,       q: 12, g: 0.40 },
+  ];
+  for (const fm of formants){
+    const bp = actx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = fm.f;
+    bp.Q.value = fm.q;
+    const g = actx.createGain(); g.gain.value = fm.g;
+    srcG.connect(bp); bp.connect(g); g.connect(shaper);
+  }
+  srcG.connect(shaper);
+
+  const noise = actx.createBufferSource(); noise.buffer = noiseBuf; noise.loop = true;
+  const nf = actx.createBiquadFilter();
+  nf.type = 'bandpass'; nf.frequency.value = 2200; nf.Q.value = 1.0;
+  const ng = actx.createGain(); ng.gain.value = 0.25;
+  noise.connect(nf); nf.connect(ng); ng.connect(shaper);
+
+  cleanup(osc, vib, noise, shaper, env, srcG);
+  osc.start(t);   osc.stop(t + dur + 0.05);
+  vib.start(t);   vib.stop(t + dur + 0.05);
+  noise.start(t); noise.stop(t + dur + 0.05);
+}
+
+const gradualScream = window.gradualScream = {
+  osc1:null, osc2:null, noise:null, gain:null, noiseFilter:null, vib:null,
+  formantFilters:null,
+  active:false,
+  start(){
+    if(!actx || this.active) return;
+    this.active = true;
+    const t = actx.currentTime;
+
+    // Fundamental
+    this.osc1 = actx.createOscillator(); this.osc1.type = 'sawtooth';
+    this.osc1.frequency.setValueAtTime(180, t);
+    // Secondary
+    this.osc2 = actx.createOscillator(); this.osc2.type = 'sawtooth';
+    this.osc2.frequency.setValueAtTime(260, t);
+
+    // Vibrato that morphs into full scream warble
+    this.vib = actx.createOscillator(); this.vib.type = 'sine'; this.vib.frequency.value = 5.5;
+    const vibG = actx.createGain(); vibG.gain.value = 8;
+    this.vib.connect(vibG);
+    vibG.connect(this.osc1.frequency);
+    vibG.connect(this.osc2.frequency);
+
+    this.noise = actx.createBufferSource();
+    this.noise.buffer = noiseBuf; this.noise.loop = true;
+    this.noiseFilter = actx.createBiquadFilter();
+    this.noiseFilter.type = 'bandpass';
+    this.noiseFilter.frequency.value = 1500;
+    this.noiseFilter.Q.value = 1.0;
+
+    const srcG  = actx.createGain(); srcG.gain.value  = 0.5;
+    this.osc1.connect(srcG);
+    const src2G = actx.createGain(); src2G.gain.value = 0.32;
+    this.osc2.connect(src2G);
+
+    const ws = actx.createWaveShaper();
+    ws.curve = distCurve(100);
+    ws.oversample = '4x';
+
+    const mixBus = actx.createGain();
+    mixBus.gain.value = 1.0;
+
+    this.formantFilters = [];
+    const formants = [
+      { f: 800,  q: 6, g: 1.1 },
+      { f: 1200, q: 8, g: 0.85 },
+      { f: 2700, q: 10, g: 0.45 },
+    ];
+    for (const fm of formants){
+      const bp = actx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = fm.f;
+      bp.Q.value = fm.q;
+      const g = actx.createGain(); g.gain.value = fm.g;
+      srcG.connect(bp); src2G.connect(bp);
+      bp.connect(g); g.connect(mixBus);
+      this.formantFilters.push({bp, g});
+    }
+    // Dry
+    const dryG = actx.createGain(); dryG.gain.value = 0.18;
+    srcG.connect(dryG); src2G.connect(dryG);
+    dryG.connect(mixBus);
+
+    // Noise path
+    const noiseBus = actx.createGain(); noiseBus.gain.value = 0.6;
+    this.noise.connect(this.noiseFilter);
+    this.noiseFilter.connect(noiseBus);
+
+    mixBus.connect(ws);
+    noiseBus.connect(ws);
+
+    this.gain = actx.createGain();
+    this.gain.gain.setValueAtTime(0.0001, t);
+    ws.connect(this.gain);
+    this.gain.connect(master);
+
+    this.osc1.start(t);
+    this.osc2.start(t);
+    this.noise.start(t);
+    this.vib.start(t);
+  },
+  update(progress){
+    if(!actx || !this.active) return;
+    const t = actx.currentTime;
+    this.gain.gain.setTargetAtTime(0.05 + progress * 0.55, t, 0.08);
+    this.osc1.frequency.setTargetAtTime(180 + progress * 420, t, 0.10);
+    this.osc2.frequency.setTargetAtTime(260 + progress * 560, t, 0.10);
+    this.noiseFilter.frequency.setTargetAtTime(1500 + progress * 2200, t, 0.10);
+  },
+  stop(){
+    if(!actx || !this.active) return;
+    const t = actx.currentTime;
+    try { this.gain.gain.cancelScheduledValues(t); } catch(e){}
+    try { this.gain.gain.linearRampToValueAtTime(0.0001, t + 0.5); } catch(e){}
+    try { this.osc1.stop(t + 0.6); } catch(e){}
+    try { this.osc2.stop(t + 0.6); } catch(e){}
+    try { this.noise.stop(t + 0.6); } catch(e){}
+    try { this.vib.stop(t + 0.6); } catch(e){}
+    this.osc1 = this.osc2 = this.noise = this.gain = this.noiseFilter = this.vib = null;
+    this.formantFilters = null;
+    this.active = false;
+  }
+};
+
+function sob(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const dur = 0.55 + Math.random() * 0.35;
+  const n  = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  const bf = actx.createBiquadFilter(); bf.type = 'bandpass'; bf.Q.value = 2.2;
+  bf.frequency.setValueAtTime(520, t);
+  bf.frequency.exponentialRampToValueAtTime(380, t + dur);
+  const ng = actx.createGain();
+  ng.gain.setValueAtTime(0.0001, t);
+  ng.gain.exponentialRampToValueAtTime(0.11, t + 0.10);
+  ng.gain.setValueAtTime(0.09, t + dur * 0.7);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const o  = actx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(310 + Math.random() * 60, t);
+  o.frequency.linearRampToValueAtTime(260, t + dur);
+  const og = actx.createGain();
+  og.gain.setValueAtTime(0.0001, t);
+  og.gain.exponentialRampToValueAtTime(0.045, t + 0.12);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  n.connect(bf); bf.connect(ng); ng.connect(master);
+  o.connect(og); og.connect(master);
+  cleanup(n, bf, ng);
+  cleanup(o, og);
+  n.start(t); n.stop(t + dur + 0.1);
+  o.start(t); o.stop(t + dur + 0.1);
+}
+
+function whimper(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const o = actx.createOscillator(); o.type = 'triangle';
+  o.frequency.setValueAtTime(440 + Math.random() * 90, t);
+  o.frequency.exponentialRampToValueAtTime(300, t + 0.18);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.05, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.20);
+  o.connect(g); g.connect(master);
+  cleanup(o, g);
+  o.start(t); o.stop(t + 0.22);
+}
+
+window.stepSound = stepSound;
+function stepSound(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 420;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.16, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  n.connect(f); f.connect(g); g.connect(master);
+  cleanup(n, f, g);
+  n.start(t); n.stop(t + 0.2);
+}
+
+function playerStep(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 900;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.08, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+  n.connect(f); f.connect(g); g.connect(master);
+  cleanup(n, f, g);
+  n.start(t); n.stop(t + 0.15);
+}
+
+let eyesClosed = false;
+window.eyesClosed = eyesClosed;
+let dead = false;
+  window.dead = dead;
+window.dead = dead;
+
+const wireMat = new THREE.MeshBasicMaterial({
+  color:0x00ff66, wireframe:true, transparent:true, opacity:0.55,
+  depthTest:true, depthWrite:false
+});
+
+function swapSCPMaterial(xray){
+  Entities.scpVisual.traverse(o => {
+    if(!o.isMesh || o.userData.hit) return;
+    if(xray){
+      if(!o.userData.origMat) o.userData.origMat = o.material;
+      o.material = wireMat;
+    } else if(o.userData.origMat){
+      o.material = o.userData.origMat;
+    }
+  });
+}
+
+function setEyes(closed){
+  eyesClosed = closed;
+  window.eyesClosed = eyesClosed;
+  const btn = document.getElementById('eyes');
+  btn.classList.toggle('closed', closed);
+  btn.innerHTML = closed ? 'OPEN<br>EYES' : 'CLOSE<br>EYES';
+
+  if(closed){
+    scene.background = BLACK;
+    scene.fog = null;
+    World.room.visible = false;
+    playerBody.visible = false;
+    swapSCPMaterial(true);
+  } else {
+    scene.background = new THREE.Color(0x05070a);
+    scene.fog = FOG;
+    World.room.visible = true;
+    playerBody.visible = true;
+    swapSCPMaterial(false);
+  }
+}
+
+const stateEl = document.getElementById('state');
+const dangerEl = document.getElementById('danger');
+const warnEl = document.getElementById('warning');
+let warnTimeout = null;
+window.showWarning = showWarning;
+function showWarning(text){
+  warnEl.textContent = text;
+  warnEl.classList.add('show');
+  if (warnTimeout) clearTimeout(warnTimeout);
+  warnTimeout = setTimeout(() => { warnEl.classList.remove('show'); warnTimeout = null; }, 2000);
+}
+
+function setState(s){
+  if(window.scp.state === s) return;
+  window.scp.state = s;
+  stateEl.textContent = s.toUpperCase();
+  if(s === 'rage'){
+    scream();
+    dangerEl.style.opacity = '0.85';
+  } else if(s === 'agitated'){
+    growl(1.0);
+    dangerEl.style.opacity = '0.18';
+  } else {
+    dangerEl.style.opacity = '0';
+  }
+}
+
+
+
+const raycaster = new THREE.Raycaster();
+const CENTER = new THREE.Vector2(0, 0);
+const _headPos = new THREE.Vector3();
+window._headPos = _headPos;
+const _dir = new THREE.Vector3();
+window._dir = _dir;
+
+let growlTimer = 1.8;
+let knockbackVel = new THREE.Vector3();
+window.knockbackVel = knockbackVel;
+let stepTimer = 0;
+window.stepTimer = stepTimer;
+let cryTimer   = 1.0;
+let yellsTimer = window.yellsTimer = 1.0;
+
+window.shortAngle = shortAngle;
+function shortAngle(a, b){
+  let d = (b - a) % (Math.PI*2);
+  if(d >  Math.PI) d -= Math.PI*2;
+  if(d < -Math.PI) d += Math.PI*2;
+  return d;
+}
+
+
+
+window.mechSound = mechSound;
+function mechSound(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  // Servo whir
+  const o = actx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(80, t);
+  o.frequency.linearRampToValueAtTime(140, t + 1.4);
+  o.frequency.linearRampToValueAtTime(90,  t + 2.0);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.14, t + 0.15);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 2.0);
+  const f = actx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
+  o.connect(f); f.connect(g); g.connect(master);
+  cleanup(o, f, g);
+  o.start(t); o.stop(t + 2.1);
+
+  // Hiss
+  const n = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  const nf = actx.createBiquadFilter(); nf.type = 'highpass'; nf.frequency.value = 2000;
+  const ng = actx.createGain();
+  ng.gain.setValueAtTime(0.0001, t);
+  ng.gain.exponentialRampToValueAtTime(0.08, t + 0.1);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+  n.connect(nf); nf.connect(ng); ng.connect(master);
+  cleanup(n, nf, ng);
+  n.start(t); n.stop(t + 1.6);
+}
+
+window.lockSound = lockSound;
+function lockSound(){
+  if(!actx) return;
+  const t = actx.currentTime;
+  // Heavy CLUNK
+  const o = actx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(90, t);
+  o.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.55, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  o.connect(g); g.connect(master);
+  cleanup(o, g);
+  o.start(t); o.stop(t + 0.55);
+
+  // Metal clank
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  const nf = actx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 3;
+  const ng = actx.createGain();
+  ng.gain.setValueAtTime(0.35, t);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+  n.connect(nf); nf.connect(ng); ng.connect(master);
+  cleanup(n, nf, ng);
+  n.start(t); n.stop(t + 0.3);
+}
+
+
+
+
+
+
+
+
+
+const msgEl = document.getElementById('msg');
+
+window.killPlayer = killPlayer;
+function killPlayer(){
+  if(dead) return;
+  dead = true;
+  window.dead = dead;
+  scream();
+  dangerEl.style.opacity = '1';
+  
+  startDeathAnim();
+  Network.broadcast({ type: 'deathStart', victimId: Network.myId,
+    px: player.pos.x, pz: player.pos.z,
+    tx: deathAnim.throwTarget.x, tz: deathAnim.throwTarget.z });
+  if (Network.aiAuthority) {
+    Brain.phase = 'returning';
+    Brain.phaseTimer = 15;
+  }
+}
+
+const _dHead = new THREE.Vector3();
+const _dTmp = new THREE.Vector3();
+const _dTmp2 = new THREE.Vector3();
+const _dTmpQ = new THREE.Quaternion();
+const _dFwd = new THREE.Vector3(0,0,-1);
+
+const deathAnim = {
+  active: false, t: 0,
+  startPos: new THREE.Vector3(), grabPos: new THREE.Vector3(),
+  throwTarget: new THREE.Vector3(), bodyPos: new THREE.Vector3(),
+  bodyRotY: 0
+};
+
+function easeDeath(t){ return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+
+function startDeathAnim(){
+  const _dHead = new THREE.Vector3();
+  deathAnim.active = true;
+  deathAnim.t = 0;
+  deathAnim.startPos.copy(camera.position);
+  if (window.Entities && window.Entities.head) {
+      window.Entities.head.getWorldPosition(_dHead);
+  } else {
+      _dHead.set(window.scp.pos.x, 1.8, window.scp.pos.z);
+  }
+  const dx = player.pos.x - window.scp.pos.x;
+  const dz = player.pos.z - window.scp.pos.z;
+  const dlen = Math.hypot(dx, dz) || 1;
+  deathAnim.grabPos.set(_dHead.x + dx/dlen*0.5, 1.75, _dHead.z + dz/dlen*0.5);
+  deathAnim.throwTarget.set(player.pos.x + dx/dlen*4, 0.2, player.pos.z + dz/dlen*4);
+  deathAnim.throwTarget.x = Math.max(-World.ROOM/2+0.7, Math.min(World.ROOM/2-0.7, deathAnim.throwTarget.x));
+  deathAnim.throwTarget.z = Math.max(-World.ROOM/2+0.7, Math.min(World.ROOM/2-0.7, deathAnim.throwTarget.z));
+  deathAnim.bodyPos.copy(player.pos); deathAnim.bodyPos.y = 0;
+  deathAnim.bodyRotY = Controls.yaw;
+}
+
+function updateDeathAnim(dt){
+  const _dHead = new THREE.Vector3();
+  const _dTmp = new THREE.Vector3();
+  const _dTmp2 = new THREE.Vector3();
+  const _dTmpQ = new THREE.Quaternion();
+  const _dFwd = new THREE.Vector3(0,0,-1);
+
+  if(!deathAnim.active) return;
+  deathAnim.t += dt;
+  const t = deathAnim.t;
+  
+  if (window.Entities && window.Entities.head) {
+      window.Entities.head.getWorldPosition(_dHead);
+  } else {
+      _dHead.set(window.scp.pos.x, 1.8, window.scp.pos.z);
+  }
+
+  if(t >= 1.4){
+    const p = Math.min(1, (t - 1.4) / 0.8);
+    if (playerBody) {
+        playerBody.position.set(deathAnim.bodyPos.x, 0.22, deathAnim.bodyPos.z);
+        playerBody.rotation.set(0, deathAnim.bodyRotY, easeDeath(p) * Math.PI/2);
+    }
+  }
+
+  if(t < 0.7){
+    const p = easeDeath(t / 0.7);
+    camera.position.lerpVectors(deathAnim.startPos, deathAnim.grabPos, p);
+    camera.lookAt(_dHead);
+  } else if(t < 1.4){
+    camera.position.copy(deathAnim.grabPos);
+    camera.position.x += Math.sin(t * 45) * 0.04;
+    camera.position.y += Math.cos(t * 50) * 0.03;
+    camera.lookAt(_dHead);
+  } else if(t < 1.8){
+    camera.position.copy(deathAnim.grabPos);
+    camera.position.x += Math.sin(t * 100) * 0.18;
+    camera.position.y += Math.cos(t * 90) * 0.12;
+    camera.lookAt(_dHead);
+  } else if(t < 2.8){
+    const p = (t - 1.8) / 1.0;
+    _dTmp.lerpVectors(deathAnim.grabPos, deathAnim.throwTarget, p);
+    _dTmp.y += Math.sin(p * Math.PI) * 2.0;
+    camera.position.copy(_dTmp);
+    camera.rotation.z += dt * 12;
+    camera.rotation.x += dt * 6;
+  } else if(t < 3.6){
+    camera.position.lerp(deathAnim.throwTarget, 1 - Math.exp(-8 * dt));
+    camera.position.y = 0.25;
+    camera.rotation.z *= 0.92;
+    camera.rotation.x *= 0.92;
+  } else {
+    const p = Math.min(1, (t - 3.6) / 0.9);
+    camera.position.copy(deathAnim.throwTarget);
+    camera.position.y = 0.25;
+    _dTmp.set(deathAnim.bodyPos.x, 0.4, deathAnim.bodyPos.z);
+    _dTmp2.subVectors(_dTmp, camera.position).normalize();
+    _dTmpQ.setFromUnitVectors(_dFwd, _dTmp2);
+    camera.quaternion.slerp(_dTmpQ, Math.min(1, p * 1.5));
+    if(t > 4.3 && !msgEl.classList.contains('show')){
+      msgEl.innerHTML = 'YOU LOOKED AT ITS FACE<small>TAP TO RESTART</small>';
+      msgEl.classList.add('show');
+    }
+  }
+  camera.updateMatrixWorld();
+}
+
+function resetGame(){
+  dead = false;
+  window.dead = dead;
+  msgEl.classList.remove('show');
+  dangerEl.style.opacity = '0';
+
+  player.pos.set(0, 1.65, -13.5);
+  Controls.yaw = Math.PI;
+  Controls.pitch = 0;
+  Controls.flipOffset = 0;
+  camera.rotation.z = 0;
+  Network.scpTargetId = null;
+  { const lb = document.getElementById('lookback'); if(lb) lb.classList.remove('active'); }
+
+  // Reset World.door
+  World.door.position.y = World.DOOR_BASE_Y;
+  World.doorState = 'closed';
+
+  // Reset wall gap
+  World.wallGapState = 'closed';
+  if (World.wallGapPanelL) World.wallGapPanelL.position.x = -World.WALL_GAP_HALF_W/2;
+  if (World.wallGapPanelR) World.wallGapPanelR.position.x = World.WALL_GAP_HALF_W/2;
+  World.initPath();
+  window.scp.returnTileIdx = undefined;
+  World.corridorFill.visible = false;
+  if (gradualScream.active) gradualScream.stop();
+
+  window.scp.state = 'dormant';
+  stateEl.textContent = 'DORMANT';
+  window.scp.pos.set(-5.2, 0, -6.2);
+  window.scp.yaw = 0.6;
+  window.scp.gaze = 0;
+  window.scp.freezeTimer = 0;
+  window.scp.calmTimer = 0;
+  Network.scpCooldown = 0;
+
+  Entities.root.position.copy(window.scp.pos);
+  Entities.root.rotation.y = window.scp.yaw;
+
+  Object.assign(cur, REST);
+
+  try { gradualScream.stop(); } catch(e){}
+  Brain.phase = 'dormant';
+  Brain.phaseTimer = 0;
+  Brain.isTriggered = false;
+  Brain.stunDuration = 15;
+  Brain.getupDuration = 2.5;
+  { const _fl = document.getElementById('stun-flash'); if (_fl) _fl.style.opacity = '0'; }
+  Brain.windupScreamTimer = 0.5;
+  Brain.emo.grief     = 0.65;
+  Brain.emo.fear      = 0.0;
+  Brain.emo.rage      = 0.0;
+  Brain.emo.attention = 0.0;
+  Brain.emo.rageLock  = 0.0;
+  Brain.mem.lookDuration = 0;
+  Brain.mem.lastNoise    = 5;
+  Brain.mem.cryPhase     = 0;
+  Brain.mem.dormantTime  = 0;
+  Brain.mem.nextWalkIn   = 20 + Math.random()*15;
+  window.scp._lastSpeed = 0;
+
+  deathAnim.active = false;
+  deathAnim.t = 0;
+  if(playerBody){ playerBody.rotation.set(0, 0, 0); playerBody.visible = true; }
+  for(const id in Network.remotePlayers){
+    const rp = Network.remotePlayers[id];
+    if(rp.data) rp.data.deathAnim = null;
+    if(rp.headMesh){ scene.remove(rp.headMesh); rp.headMesh = null; }
+    if(rp.bloodPool){ scene.remove(rp.bloodPool); rp.bloodPool = null; }
+  }
+  if(eyesClosed) setEyes(false);
+  swapSCPMaterial(false);
+  if(cryingAudio) { cryingAudio.pause(); cryingAudio.currentTime = 0; }
+  Network.broadcast({ type: 'reset', id: Network.myId, targetId: Network.scpTargetId });
+}
+msgEl.addEventListener('pointerdown', e => { e.stopPropagation(); resetGame(); });
+
+const _fwd = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _move = new THREE.Vector3();
+
+function updatePlayer(dt){
+  if(dead) return;
+
+  _fwd.set(-Math.sin(Controls.yaw), 0, -Math.cos(Controls.yaw));
+  _right.set(Math.cos(Controls.yaw), 0, -Math.sin(Controls.yaw));
+
+  _move.set(0,0,0);
+  _move.addScaledVector(_fwd, Controls.moveY);
+  _move.addScaledVector(_right, Controls.moveX);
+
+  if(_move.lengthSq() > 1) _move.normalize();
+
+  let speed = eyesClosed ? 1.7 : 2.9;
+  if (Brain.phase === 'chase' && Network.scpTargetId === Network.myId && player.pos.z > World.ROOM/2 - 0.5){
+    speed = CHASE_SPEED_PLAYER;
+  }
+  player.pos.addScaledVector(_move, speed * dt);
+  player.pos.addScaledVector(knockbackVel, dt);
+  knockbackVel.multiplyScalar(Math.max(0, 1 - dt * 5));
+
+  const dx = player.pos.x - window.scp.pos.x;
+  const dz = player.pos.z - window.scp.pos.z;
+  const hd = Math.hypot(dx, dz);
+  if(hd < 0.85 && hd > 0.001){
+    player.pos.x = window.scp.pos.x + (dx/hd) * 0.85;
+    player.pos.z = window.scp.pos.z + (dz/hd) * 0.85;
+  }
+
+  // Collide with the dividing wall + closed World.door
+  const WALL_Z = -World.ROOM/2;
+  const WALL_HALF = 0.2;
+  const PR = 0.4;
+  const DOORWAY_HALF = 1.0;
+  const nearWall = Math.abs(player.pos.z - WALL_Z) < WALL_HALF + PR;
+  if (nearWall){
+    const inDoorway = Math.abs(player.pos.x) < DOORWAY_HALF;
+    const canPass = inDoorway && World.doorState === 'open';
+    if (!canPass){
+      if (player.pos.z < WALL_Z){
+        player.pos.z = WALL_Z - WALL_HALF - PR;
+      } else {
+        player.pos.z = WALL_Z + WALL_HALF + PR;
+      }
+    }
+  }
+
+  // Room-specific bounds
+  if (player.pos.z < WALL_Z){
+    // Antechamber
+    player.pos.x = Math.max(-World.ANTE_W/2 + 0.6, Math.min(World.ANTE_W/2 - 0.6, player.pos.x));
+    player.pos.z = Math.max(-17 + 0.6, player.pos.z);
+  } else {
+    // Containment cell / corridor
+    const lim = World.ROOM/2 - 0.6;
+    if (player.pos.z < lim){
+      player.pos.x = Math.max(-lim, Math.min(lim, player.pos.x));
+    } else {
+      const sealed = Brain.phase === 'chase' && Network.scpTargetId !== Network.myId;
+      const canPass = !sealed && World.wallGapState === 'open' && Math.abs(player.pos.x) < World.WALL_GAP_HALF_W - 0.4;
+      if (!canPass && player.pos.z < World.ROOM/2 + 0.5){
+        player.pos.z = lim;
+        player.pos.x = Math.max(-lim, Math.min(lim, player.pos.x));
+      } else if (player.pos.z > World.ROOM/2 + 0.5){
+        World.clampToCorridor(player.pos);
+      }
+    }
+  }
+
+  const bob = Math.sin(performance.now() * 0.011) * 0.012 * _move.length();
+  player.pos.y = 1.65 + bob;
+}
+
+function updateCamera(){
+  if (window.isThirdPerson) {
+      const forward = new THREE.Vector3(-Math.sin(Controls.yaw), 0, -Math.cos(Controls.yaw));
+      camera.position.copy(player.pos);
+      camera.position.addScaledVector(forward, -4.0);
+      camera.position.y += 1.5;
+      camera.lookAt(player.pos.x, player.pos.y + 1.0, player.pos.z);
+      playerBody.visible = true;
+  } else {
+      camera.position.copy(player.pos);
+      camera.rotation.y = Controls.yaw + Controls.flipOffset;
+      camera.rotation.x = Controls.pitch;
+      if (eyesClosed) playerBody.visible = false;
+  }
+  camera.updateMatrixWorld();
+}
+
+function updatePlayerBody(dt){
+  if(dead && deathAnim.active) return;
+  const moveMag = dead ? 0 : Math.min(1, Math.hypot(Controls.moveX, Controls.moveY));
+  const targetWalk = moveMag > 0.15 ? Math.min(1, moveMag * 2) : 0;
+  walkAmount += (targetWalk - walkAmount) * (1 - Math.exp(-10 * dt));
+
+  const prevPhase = walkPhase;
+  if (walkAmount > 0.1){
+    const speedScale = eyesClosed ? 0.6 : 1.0;
+    walkPhase += dt * 7 * (0.6 + walkAmount * 0.4) * speedScale;
+  }
+  if (walkAmount > 0.3 && !dead){
+    if (Math.floor(prevPhase / Math.PI) !== Math.floor(walkPhase / Math.PI)){
+      playerStep();
+    }
+  }
+
+  if (eyesClosed){
+    playerBody.visible = false;
+    return;
+  }
+  playerBody.visible = true;
+  const bX = Math.sin(Controls.yaw) * 0.4;
+  const bZ = Math.cos(Controls.yaw) * 0.4;
+  playerBody.position.set(player.pos.x + bX, 0, player.pos.z + bZ);
+  playerBody.rotation.y = Controls.yaw;
+
+  const swing    = Math.sin(walkPhase);
+  const swingOpp = Math.sin(walkPhase + Math.PI);
+  const cosP     = Math.cos(walkPhase);
+  const cosOpp   = Math.cos(walkPhase + Math.PI);
+
+  pLegL.hipG.rotation.x  = swing * 0.5 * walkAmount;
+  pLegL.kneeG.rotation.x = -Math.max(0, cosP) * 0.9 * walkAmount;
+  pLegR.hipG.rotation.x  = swingOpp * 0.5 * walkAmount;
+  pLegR.kneeG.rotation.x = -Math.max(0, cosOpp) * 0.9 * walkAmount;
+
+  pArmL.shoulderG.rotation.x = swingOpp * 0.35 * walkAmount;
+  pArmR.shoulderG.rotation.x = swing * 0.35 * walkAmount;
+  pArmL.elbowG.rotation.x = -0.12 - Math.max(0, swingOpp) * 0.3 * walkAmount;
+  pArmR.elbowG.rotation.x = -0.12 - Math.max(0, swing) * 0.3 * walkAmount;
+
+  const breathe = Math.sin(performance.now() * 0.0015) * 0.006;
+  pTorso.position.y = 1.20 + breathe;
+}
+
+const stickEl = document.getElementById('stick');
+const knobEl  = document.getElementById('knob');
+
+
+
+const lbData = {};
+setInterval(() => {
+    lbData[myName] = { coins: coins, isMe: true };
+    for (let id in Network.remotePlayers) {
+        const rp = Network.remotePlayers[id];
+        if (rp.data && rp.data.name) lbData[rp.data.name] = { coins: rp.data.coins || 0, isMe: false };
+    }
+    const list = document.getElementById('lb-list');
+    if (!list) return;
+    const sorted = Object.entries(lbData).sort((a, b) => b[1].coins - a[1].coins);
+    list.innerHTML = sorted.map(([name, data], i) =>
+        `<div style="display:flex; justify-content:space-between; ${data.isMe ? 'color:#fff; font-weight:bold;' : ''}">
+            <span>${i+1}. ${name}</span>
+            <span>🪙 ${Math.floor(data.coins)}</span>
+        </div>`
+    ).join('');
+}, 2000);
+
+const chatInput = document.getElementById('chat-input');
+const chatMsgs = document.getElementById('chat-messages');
+const chatToggle = document.getElementById('chat-toggle');
+
+chatToggle.addEventListener('pointerdown', e => { e.stopPropagation(); chatInput.style.display = chatInput.style.display === 'none' ? 'block' : 'none'; if(chatInput.style.display==='block') chatInput.focus(); });
+chatInput.addEventListener('pointerdown', e => e.stopPropagation());
+chatInput.addEventListener('keydown', async e => {
+    if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+        const text = chatInput.value.trim().substring(0, 50);
+        const lower = text.toLowerCase();
+        
+        if (lower === '?control') {
+            try {
+                const res = await fetch('https://cool-theta-seven.vercel.app/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: window._devAuthToken || myName })
+                });
+                const data = await res.json();
+                if (data.authorized && data.secretCode === 'UNL_GUN_X99') {
+                    window.scpControlState = 'gettingUp';
+                    window.scpControllerId = Network.myId;
+                    Brain.phase = 'standup';
+                    Brain.standupDuration = 4.0;
+                    Brain.phaseTimer = 4.0;
+                    Brain.isTriggered = false;
+                    Network.broadcast({ type: 'scpControl', id: Network.myId, state: 'gettingUp' });
+                    showWarning('SCP Approaching...');
+                } else { showWarning('Access Denied'); }
+            } catch(e) { showWarning('Auth Offline'); }
+            chatInput.value = ''; chatInput.blur(); return;
+        }
+        
+        if (lower === 'kill' && window.scpControlState === 'following' && window.scpControllerId === Network.myId) {
+            raycaster.setFromCamera(CENTER, camera);
+            raycaster.far = 40;
+            let hitId = null;
+            for (let id in Network.remotePlayers) {
+                const rp = Network.remotePlayers[id];
+                if (!rp.mesh) continue;
+                const hits = raycaster.intersectObject(rp.mesh, true);
+                if (hits.length > 0 && hits[0].distance < 30) { hitId = id; break; }
+            }
+            if (hitId) {
+                window.scpControlState = null;
+                window.scpControllerId = null;
+                Brain.phase = 'windup'; Brain.phaseTimer = 5; Brain.isTriggered = true;
+                Network.scpTargetId = hitId;
+                Network.broadcast({ type: 'scpControlRelease' });
+                Network.broadcast({ type: 'trigger', id: hitId });
+                Network.broadcast({ type: 'windupStart' });
+                showWarning('Targeting ' + (Network.remotePlayers[hitId].data.name || 'Player'));
+            } else {
+                showWarning('No target in sight');
+            }
+            chatInput.value = ''; chatInput.blur(); return;
+        }
+        
+        if (lower === '?control') {
+            try {
+                const res = await fetch('https://cool-theta-seven.vercel.app/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: window._devAuthToken || myName })
+                });
+                const data = await res.json();
+                if (data.authorized && data.secretCode === 'UNL_GUN_X99') {
+                    window.scpControlState = 'gettingUp';
+                    window.scpControllerId = Network.myId;
+                    Brain.phase = 'standup';
+                    Brain.standupDuration = 4.0;
+                    Brain.phaseTimer = 4.0;
+                    Brain.isTriggered = false;
+                    Network.broadcast({ type: 'scpControl', id: Network.myId, state: 'gettingUp' });
+                    showWarning('SCP Approaching...');
+                } else { showWarning('Access Denied'); }
+            } catch(e) { showWarning('Auth Offline'); }
+            chatInput.value = ''; chatInput.blur(); return;
+        }
+        
+        if (lower === 'kill' && window.scpControlState === 'following' && window.scpControllerId === Network.myId) {
+            raycaster.setFromCamera(CENTER, camera);
+            raycaster.far = 40;
+            let hitId = null;
+            for (let id in Network.remotePlayers) {
+                const rp = Network.remotePlayers[id];
+                if (!rp.mesh) continue;
+                const hits = raycaster.intersectObject(rp.mesh, true);
+                if (hits.length > 0 && hits[0].distance < 30) { hitId = id; break; }
+            }
+            if (hitId) {
+                window.scpControlState = null;
+                window.scpControllerId = null;
+                Brain.phase = 'windup'; Brain.phaseTimer = 5; Brain.isTriggered = true;
+                Network.scpTargetId = hitId;
+                Network.broadcast({ type: 'scpControlRelease' });
+                Network.broadcast({ type: 'trigger', id: hitId });
+                Network.broadcast({ type: 'windupStart' });
+                showWarning('Targeting ' + (Network.remotePlayers[hitId].data.name || 'Player'));
+            } else {
+                showWarning('No target in sight');
+            }
+            chatInput.value = ''; chatInput.blur(); return;
+        }
+        
+        if (lower === '?unl.gun') {
+            try {
+                const res = await fetch('https://cool-theta-seven.vercel.app/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: window._devAuthToken || myName })
+                });
+                const data = await res.json();
+                if (data.authorized && data.secretCode === 'UNL_GUN_X99') {
+                    hasStunGun = true;
+                    lastStungunBuy = 0;
+                    saveStunGun();
+                    _lastStungunState = '';
+                    updateStungunButton();
+                    showWarning('God Mode: Infinite Stun Gun');
+                } else {
+                    showWarning('Access Denied');
+                }
+            } catch (err) {
+                showWarning('Auth Offline');
+            }
+            chatInput.value = '';
+            chatInput.blur();
+            return;
+        }
+        
+        if (lower.startsWith('?window.scp.target ')) {
+            const targetName = text.substring(12).trim();
+            let foundId = null;
+            for (let id in Network.remotePlayers) {
+                if (Network.remotePlayers[id].data && Network.remotePlayers[id].data.name === targetName) {
+                    foundId = id;
+                    break;
+                }
+            }
+            if (foundId) {
+                Network.scpTargetId = foundId;
+                Brain.trigger();
+                Network.broadcast({ type: 'trigger', id: foundId });
+                showWarning('Targeted ' + targetName);
+            } else {
+                showWarning('Player not found');
+            }
+            chatInput.value = '';
+            chatInput.blur();
+            return;
+        }
+        
+        // Normal chat
+        Network.broadcast({ type: 'chat', id: Network.myId, name: myName || Network.myId, text: text });
+        appendChat(myName || Network.myId, text);
+        chatInput.value = '';
+        chatInput.blur();
+    }
+});
+function appendChat(id, text) {
+    const d = document.createElement('div');
+    d.textContent = `${id}: ${text}`;
+    chatMsgs.appendChild(d);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+}
+
+
+
+const eyesBtn = document.getElementById('eyes');
+eyesBtn.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  if(dead || !started) return;
+  setEyes(!eyesClosed);
+});
+window.forceEyesToggle = () => setEyes(!eyesClosed);
+
+const lookbackBtn = document.getElementById('lookback');
+lookbackBtn.addEventListener('pointerdown', e => {
+  e.stopPropagation();
+  if(dead || !started) return;
+  Controls.flipOffset = Controls.flipOffset === 0 ? Math.PI : 0;
+  lookbackBtn.classList.toggle('active', Controls.flipOffset !== 0);
+});
+
+let started = false;
+let cryingAudio = null;
+let myName = '';
+const startEl = document.getElementById('tapstart');
+const tapstartGo = document.getElementById('tapstart-go');
+const usernameStage = document.getElementById('username-stage');
+const usernameInput = document.getElementById('username-input');
+const playBtn = document.getElementById('play-btn');
+
+function startGame(){
+  if(started) return;
+  started = true;
+  startEl.style.display = 'none';
+  initAudio();
+  Controls.init(renderer.domElement, player);
+  cryingAudio = new Audio('crying.mp3');
+  cryingAudio.loop = true;
+  cryingAudio.volume = 0.5; // Increased volume from 0.15
+  cryingAudio.play().catch(e => console.log('Audio play blocked:', e)); // Force play on gesture
+  
+  // Set default authority immediately so game doesn't freeze while connecting
+  Network.isHost = true;
+  Network.aiAuthority = true;
+  const hud = document.getElementById('hud');
+  if (hud) hud.innerHTML = 'SCP-096<br><b id="state">DORMANT</b><br><span style="color:#0a8;font-size:9px;">HOST '+Network.roomNum+'</span>';
+  
+  Network.connect();
+  if(actx && actx.state === 'suspended') actx.resume();
+  startUpdateWatcher();
+}
+
+function tryStart(){
+  const name = usernameInput.value.trim().substring(0, 16);
+  if(!name) return;
+  
+  const _secretDev = atob('RGV2aW4xMTI1'); 
+  if (name === _secretDev) {
+      myName = 'Devin_' + Math.random().toString(36).substring(2, 5).toUpperCase();
+      window._devAuthToken = name;
+  } else {
+      myName = name;
+  }
+  
+  try { usernameInput.blur(); } catch(e){}
+  startGame();
+}
+
+tapstartGo.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  tapstartGo.style.display = 'none';
+  usernameStage.classList.add('show');
+  setTimeout(() => { try { usernameInput.focus(); } catch(_){} }, 220);
+});
+usernameInput.addEventListener('pointerdown', e => e.stopPropagation());
+usernameInput.addEventListener('input', () => {
+  if(usernameInput.value.trim().length >= 1) playBtn.classList.add('ready');
+  else playBtn.classList.remove('ready');
+});
+usernameInput.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){ e.preventDefault(); tryStart(); }
+});
+playBtn.addEventListener('pointerdown', e => { e.preventDefault(); tryStart(); });
+
+// Direct Eye Toggle for PC
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyT' && started) { window.isThirdPerson = !window.isThirdPerson; const b = document.getElementById('thirdperson'); if(b) b.style.color = window.isThirdPerson ? '#00ff66' : '#0a8'; }
+    if (e.code === 'KeyE' && started && !dead) {
+        setEyes(!eyesClosed);
+    }
+});
+
+let last = performance.now();
+let elapsed = 0;
+
+function loop(now){
+  requestAnimationFrame(loop);
+
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  
+  // FORCE RESIZE (Fixes mobile keyboard cut-off)
+  if (renderer.domElement.width !== window.innerWidth || renderer.domElement.height !== window.innerHeight) {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+  }
+  
+  // Force canvas to match screen size (fixes mobile keyboard resizing bug)
+  if (renderer.domElement.width !== window.innerWidth * currentPixelRatio || renderer.domElement.height !== window.innerHeight * currentPixelRatio) {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+  }
+  
+  // ─── DYNAMIC RESOLUTION SCALING ───
+  _fpsFrames++;
+  _fpsTime += dt;
+  if (_fpsTime >= 1.0) { // Check every 1 second
+      const fps = _fpsFrames / _fpsTime;
+      const maxRatio = Math.min(window.devicePixelRatio, 1.75);
+      
+      if (fps < 45 && currentPixelRatio > 0.6) {
+          // Lagging: Drop resolution
+          currentPixelRatio = Math.max(0.6, currentPixelRatio - 0.1);
+          renderer.setPixelRatio(currentPixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+      } else if (fps > 58 && currentPixelRatio < maxRatio) {
+          // Running great: Increase resolution
+          currentPixelRatio = Math.min(maxRatio, currentPixelRatio + 0.05);
+          renderer.setPixelRatio(currentPixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+      }
+      _fpsFrames = 0;
+      _fpsTime = 0;
+  }
+  // ───────────────────────────────────
+  elapsed += dt;
+
+  if(started){
+    Controls.update();
+    if(deathAnim.active){
+      updateDeathAnim(dt);
+    } else {
+      updatePlayer(dt);
+      updatePlayerBody(dt);
+      
+      updateCamera();
+    }
+    
+    World.update(dt, player, Brain);
+    if (Brain.phase === 'windup' && actx) {
+      const progress = 1 - Brain.phaseTimer / Brain.windupDuration;
+      gradualScream.update(progress);
+      window.yellsTimer -= dt;
+      if (window.yellsTimer <= 0) {
+        window.yellsTimer = 0.5 + Math.random() * 1.8;
+        randomYell();
+      }
+    } else if (Brain.phase === 'chase' && actx){
+      if (!gradualScream.active) gradualScream.start();
+      gradualScream.update(1.0);
+    } else if ((Brain.phase === 'returning' || Brain.phase === 'dormant' || Brain.phase === 'stunned' || Brain.phase === 'gettingUp') && gradualScream.active){
+      gradualScream.stop();
+    }
+    const _tf = (Brain.phase === 'chase' && Network.scpTargetId === Network.myId && player.pos.z > World.ROOM/2 - 0.5) ? 82 : 74;
+    if (Math.abs(camera.fov - _tf) > 0.05){
+      camera.fov += (_tf - camera.fov) * (1 - Math.exp(-4 * dt));
+      camera.updateProjectionMatrix();
+    }
+    Entities.updatePose(dt, elapsed);
+    
+    if (cryingAudio) {
+        if (Brain.phase === 'dormant' || Brain.phase === 'retreat' || Brain.phase === 'walking' || Brain.phase === 'stunned' || Brain.phase === 'gettingUp') {
+            if (cryingAudio.paused && !window.dead) cryingAudio.play().catch(e=>{});
+        } else {
+            if (!cryingAudio.paused) cryingAudio.pause();
+        }
+    }
+    Entities.updateAI(dt, elapsed, player, camera, raycaster);
+    tickCoins(dt);
+    updateCoinsDisplay();
+    updateStungunButton();
+    
+    if (Network.aiAuthority && started) {
+        const now = Date.now();
+        const dtCheck = (now - Network._hostLastCheck) / 1000;
+        if (dtCheck > 2) {
+            const maxEarn = dtCheck * 0.34 + 0.5;
+            const delta = coins - Network._hostLastCoins;
+            if (delta > maxEarn) {
+                coins = Network._hostLastCoins;
+                saveCoins();
+                _lastCoinDisplay = -1;
+            } else {
+                Network._hostLastCoins = coins;
+            }
+            Network._hostLastCheck = now;
+        }
+    }
+    
+    if (!window.syncInterval) {
+        window.syncInterval = setInterval(() => {
+            if (!started) return;
+            Network.broadcast({ type: 'state', id: Network.myId, name: myName, px: player.pos.x, py: player.pos.y, pz: player.pos.z, yaw: player.yaw, pitch: player.pitch, dead: dead, coins: coins, hasStunGun: hasStunGun, cooldown: lastStungunBuy });
+            if (Network.aiAuthority) {
+                Network.broadcast({ type: 'scpState', px: window.scp.pos.x, pz: window.scp.pos.z, yaw: window.scp.yaw, phase: Brain.phase, phaseTimer: Brain.phaseTimer, punchTimer: Brain.punchTimer, punchSide: Brain.punchSide, punchCooldown: window.scp._punchCooldown || 0 });
+                if (Network.conns.length > 0) {
+                    let pings = {};
+                    Network.conns.forEach(c => pings[c.peer] = c.latency || 9999);
+                    Network.broadcast({ type: 'pings', pings: pings });
+                }
+            }
+        }, 50);
+    }
+  }
+  
+  for (let id in Network.remotePlayers) {
+      let rp = Network.remotePlayers[id];
+      if (!rp.mesh) continue;
+      let d = rp.data;
+      if (d.deathAnim){
+          d.deathAnim.t += dt;
+          const tDA = d.deathAnim.t;
+          rp.mesh.position.set(d.deathAnim.startX, 0.22, d.deathAnim.startZ);
+          rp.mesh.rotation.z = Math.min(Math.PI/2, tDA * 4);
+          if (rp.headMesh){
+            if (tDA < 1.8){
+              rp.headMesh.visible = false;
+            } else if (tDA < 2.8){
+              const p = (tDA - 1.8) / 1.0;
+              rp.headMesh.visible = true;
+              rp.headMesh.position.set(
+                d.deathAnim.startX + (d.deathAnim.throwX - d.deathAnim.startX) * p,
+                0.2 + Math.sin(p * Math.PI) * 1.5,
+                d.deathAnim.startZ + (d.deathAnim.throwZ - d.deathAnim.startZ) * p
+              );
+            } else {
+              rp.headMesh.visible = true;
+              rp.headMesh.position.set(d.deathAnim.throwX, 0.15, d.deathAnim.throwZ);
+            }
+          }
+      } else if (d.dead) {
+          rp.mesh.position.lerp(new THREE.Vector3(d.px, 0.3, d.pz), 1 - Math.exp(-15 * dt));
+          rp.mesh.rotation.z = Math.PI / 2;
+      } else {
+          rp.mesh.position.lerp(new THREE.Vector3(d.px, 0, d.pz), 1 - Math.exp(-15 * dt));
+          rp.mesh.rotation.z = 0;
+      }
+      rp.mesh.rotation.y = d.yaw;
+  }
+
+  const flick = Math.sin(elapsed*27.3) * 2.2
+              + Math.sin(elapsed*61.7) * 1.1
+              + (Math.random() < 0.006 ? -28 : 0);
+  World.mainLight.intensity = Math.max(6, 42 + flick);
+
+  if(window.scp.state === 'rage'){
+    World.doorLight.intensity = 14 + Math.sin(elapsed*14) * 9;
+  } else {
+    World.doorLight.intensity *= 0.94;
+  }
+
+  if(breathGain && actx){
+    const target = window.scp.state === 'rage' ? 0.13
+                 : window.scp.state === 'agitated' ? 0.05
+                 : 0.012;
+    breathGain.gain.setTargetAtTime(target, actx.currentTime, 0.45);
+  }
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('focus', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ─── AUTO UPDATE WATCHER ───
+const UPDATE_REPO     = 'simpsondevin686-lgtm/scp096-containment';
+const UPDATE_BASE_URL = 'https://simpsondevin686-lgtm.github.io/scp096-containment/';
+let updateEtag        = null;
+let updateBaselineSha = null;
+let updateWatchSha    = null;
+let updateTriggered   = false;
+let updatePollTimer   = null;
+
+function showUpdateBanner(){
+  const el = document.getElementById('update-banner');
+  if (!el) return;
+  el.classList.remove('manual');
+  el.textContent = 'A commit has been added to the repository. The game will restart once the building process is finished so that you can play the updated version.';
+  el.classList.add('show');
+  setTimeout(() => { if (!el.classList.contains('manual')) el.classList.remove('show'); }, 5000);
+}
+function showManualRefreshBanner(){
+  const el = document.getElementById('update-banner');
+  if (!el) return;
+  el.textContent = 'Update build failed. Please refresh the page manually to retry. (Tap here to refresh)';
+  el.classList.add('show', 'manual');
+}
+function doUpdateReload(){
+  const v = Math.random().toString(36).substring(2, 8);
+  window.location.href = UPDATE_BASE_URL + '?v=' + v;
+}
+function scheduleUpdatePoll(sec){
+  if (updatePollTimer) clearTimeout(updatePollTimer);
+  updatePollTimer = setTimeout(pollUpdate, sec * 1000);
+}
+function onBuildComplete(conclusion, sha){
+  if (conclusion === 'success'){ doUpdateReload(); return; }
+  updateTriggered = false;
+  updateBaselineSha = sha;
+  updateWatchSha = null;
+  showManualRefreshBanner();
+  scheduleUpdatePoll(15);
+}
+async function pollUpdate(){
+  const headers = {'Accept':'application/vnd.github+json'};
+  if (updateEtag) headers['If-None-Match'] = updateEtag;
+  let data = null;
+  try{
+    const r = await fetch('https://api.github.com/repos/' + UPDATE_REPO + '/actions/runs?branch=main&per_page=5', {headers});
+    if (r.status === 304){ scheduleUpdatePoll(updateTriggered ? 4 : 6); return; }
+    if (!r.ok){ scheduleUpdatePoll(15); return; }
+    const etag = r.headers.get('ETag');
+    if (etag) updateEtag = etag;
+    data = await r.json();
+  }catch(e){ scheduleUpdatePoll(15); return; }
+
+  const runs = (data && data.workflow_runs) || [];
+  let run = runs.find(x => /pages|deploy|github-pages/i.test(x.name || '')) || runs[0];
+  if (!run){ scheduleUpdatePoll(10); return; }
+  const sha = run.head_sha;
+  const status = run.status;
+  const conclusion = run.conclusion;
+
+  if (!updateBaselineSha){
+    updateBaselineSha = sha;
+    if (status !== 'completed'){
+      updateTriggered = true;
+      updateWatchSha = sha;
+      showUpdateBanner();
+      scheduleUpdatePoll(4);
+    } else {
+      scheduleUpdatePoll(6);
+    }
+    return;
+  }
+
+  if (sha !== updateBaselineSha && !updateTriggered){
+    updateTriggered = true;
+    updateWatchSha = sha;
+    showUpdateBanner();
+    if (status === 'completed'){
+      setTimeout(() => onBuildComplete(conclusion, sha), 5000);
+    } else {
+      scheduleUpdatePoll(4);
+    }
+    return;
+  }
+
+  if (updateTriggered && sha === updateWatchSha){
+    if (status === 'completed'){
+      onBuildComplete(conclusion, sha);
+      return;
+    }
+    scheduleUpdatePoll(4);
+    return;
+  }
+
+  scheduleUpdatePoll(6);
+}
+function startUpdateWatcher(){
+  const el = document.getElementById('update-banner');
+  if (el){
+    el.addEventListener('pointerdown', (e) => {
+      if (el.classList.contains('manual')){
+        e.stopPropagation();
+        doUpdateReload();
+      }
+    });
+  }
+  pollUpdate();
+  scheduleUpdatePoll(6);
+}
+// ─── END AUTO UPDATE WATCHER ───
+
+// ─── COINS + STUN GUN ───
+const STUNGUN_COST = 50;
+const STUNGUN_COOLDOWN = 210000; // 3.5 minutes
+const SEC_SALT = 'scp096_sys_99x';
+
+const secEnc = (v) => btoa(SEC_SALT + String(v));
+const secDec = (k, def) => {
+  try {
+    const v = localStorage.getItem(k);
+    return v ? atob(v).replace(SEC_SALT, '') : def;
+  } catch(e){ return def; }
+};
+
+let coins = parseFloat(secDec('_sC9', '0')) || 0;
+let hasStunGun = secDec('_sG2', '0') === '1';
+let lastStungunBuy = parseFloat(secDec('_sB5', '0')) || 0;
+let lastStunFire = 0;
+let _lastCoinDisplay = -1;
+let _lastStungunState = '';
+let coinsSaveTimer = 0;
+
+function saveCoins(){ try{ localStorage.setItem('_sC9', secEnc(coins)); }catch(e){} }
+function saveStunGun(){
+  try{
+    localStorage.setItem('_sG2', secEnc(hasStunGun ? '1' : '0'));
+    localStorage.setItem('_sB5', secEnc(lastStungunBuy));
+  }catch(e){}
+}
+function updateCoinsDisplay(){
+  const d = Math.floor(coins);
+  if (d === _lastCoinDisplay) return;
+  _lastCoinDisplay = d;
+  const el = document.getElementById('coin-count');
+  if (el) el.textContent = String(d);
+}
+function tickCoins(dt){
+  if (!started || dead) return;
+  const inChase = (Brain.phase === 'chase' && Network.scpTargetId === Network.myId);
+  const rate = inChase ? (10/30) : (5/60);
+  coins += rate * dt;
+  coinsSaveTimer += dt;
+  if (coinsSaveTimer >= 5){ saveCoins(); coinsSaveTimer = 0; }
+}
+function updateStungunButton(){
+  const btn = document.getElementById('stungun');
+  if (!btn) return;
+  let state;
+  if (hasStunGun){
+    const canFire = Brain.phase === 'windup' || Brain.phase === 'scream' || Brain.phase === 'chase';
+    state = canFire ? 'fire-active' : 'fire-disabled';
+  } else {
+    const now = Date.now();
+    const cdLeft = Math.max(0, STUNGUN_COOLDOWN - (now - lastStungunBuy));
+    if (cdLeft > 0) {
+      state = 'cooldown_' + Math.ceil(cdLeft/1000);
+    } else if (coins >= STUNGUN_COST) {
+      state = 'buy-ready';
+    } else {
+      state = 'buy-disabled';
+    }
+  }
+  if (state === _lastStungunState) return;
+  _lastStungunState = state;
+  
+  if (hasStunGun){
+    btn.innerHTML = 'FIRE';
+    btn.classList.toggle('active', state === 'fire-active');
+    btn.classList.toggle('disabled', state === 'fire-disabled');
+  } else if (state.startsWith('cooldown')) {
+    btn.innerHTML = 'WAIT<br>' + state.split('_')[1] + 's';
+    btn.classList.remove('active');
+    btn.classList.add('disabled');
+  } else {
+    btn.innerHTML = 'BUY<br>' + STUNGUN_COST;
+    btn.classList.remove('active');
+    btn.classList.toggle('disabled', state === 'buy-disabled');
+  }
+}
+function shockSound(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const o = actx.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(800, t);
+  o.frequency.exponentialRampToValueAtTime(200, t + 0.4);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.4, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+  const f = actx.createBiquadFilter(); f.type='highpass'; f.frequency.value=300;
+  o.connect(f); f.connect(g); g.connect(master);
+  cleanup(o, f, g); o.start(t); o.stop(t + 0.55);
+  const n = actx.createBufferSource(); n.buffer = noiseBuf;
+  const nf = actx.createBiquadFilter(); nf.type='bandpass'; nf.frequency.value=2000; nf.Q.value=2;
+  const ng = actx.createGain();
+  ng.gain.setValueAtTime(0.0001, t);
+  ng.gain.exponentialRampToValueAtTime(0.3, t + 0.02);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+  n.connect(nf); nf.connect(ng); ng.connect(master);
+  cleanup(n, nf, ng); n.start(t); n.stop(t + 0.35);
+}
+function stunMissSound(){
+  if (!actx) return;
+  const t = actx.currentTime;
+  const o = actx.createOscillator(); o.type='square';
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(80, t + 0.15);
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.15, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+  o.connect(g); g.connect(master);
+  cleanup(o, g); o.start(t); o.stop(t + 0.22);
+}
+function stunFlash(){
+  const el = document.getElementById('stun-flash');
+  if (!el) return;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 150);
+}
+function applyStunVisual(){ shockSound(); stunFlash(); }
+function applyStun(){
+        if (!Network.aiAuthority) return;
+        let success = false;
+        if (typeof Brain.stun === 'function') success = Brain.stun();
+        else { Brain.phase = 'stunned'; Brain.phaseTimer = 15; success = true; }
+        if (!success) return;
+        applyStunVisual();
+        Network.scpTargetId = null;
+        window.scp._punchCooldown = 0;
+        Network.scpCooldown = 3.0;
+    }
+function fireStunGun(){
+        if (!hasStunGun || dead || !started) return;
+        const now = performance.now();
+        if (now - lastStunFire < 1000) return;
+        lastStunFire = now;
+
+        const activePhases = ['windup', 'scream', 'chase', 'standup', 'walking'];
+        if (!activePhases.includes(Brain.phase)){
+            showWarning('SCP is not active yet!');
+            return;
+        }
+
+        const scpCenter = window.scp.pos.clone().add(new THREE.Vector3(0, 1.2, 0));
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        const toScp = scpCenter.clone().sub(camera.position).normalize();
+        const dot = camDir.dot(toScp);
+        const dist = camera.position.distanceTo(scpCenter);
+
+        raycaster.setFromCamera(CENTER, camera);
+        raycaster.far = 40;
+        const wallHits = raycaster.intersectObjects(World.room.children, true);
+        const scpHits = raycaster.intersectObject(Entities.scpVisual, true);
+        
+        let hit = false;
+        if (scpHits.length > 0){
+            const d = scpHits[0].distance;
+            if (wallHits.length === 0 || wallHits[0].distance > d) hit = true;
+        } else if (dot > 0.80 && dist < 25) {
+            const ray = new THREE.Raycaster(camera.position, toScp);
+            const wallBlock = ray.intersectObjects(World.room.children, true);
+            if (wallBlock.length === 0 || wallBlock[0].distance > dist) hit = true;
+        }
+
+        if (hit){
+            hasStunGun = false;
+            saveStunGun();
+            _lastStungunState = '';
+            updateStungunButton();
+            if (Network.aiAuthority) applyStun();
+            else { Network.broadcast({ type: 'stunHit' }); applyStunVisual(); }
+            showWarning('Stun Hit!');
+        } else {
+            stunMissSound();
+            showWarning('Missed!');
+        }
+    }
+function handleStunAction() {
+    if (dead || !started) return;
+    if (hasStunGun){ fireStunGun(); }
+    else {
+      const now = Date.now();
+      const cdLeft = Math.max(0, STUNGUN_COOLDOWN - (now - lastStungunBuy));
+      if (cdLeft > 0) {
+        showWarning('Gun on cooldown: ' + Math.ceil(cdLeft/1000) + 's');
+        return;
+      }
+      if (coins >= STUNGUN_COST){
+        coins -= STUNGUN_COST;
+        hasStunGun = true;
+        lastStungunBuy = Date.now();
+        saveCoins(); saveStunGun();
+        _lastCoinDisplay = -1; _lastStungunState = '';
+        updateCoinsDisplay(); updateStungunButton();
+      } else {
+        showWarning('Need ' + STUNGUN_COST + ' coins');
+      }
+    }
+}
+
+const stungunBtn = document.getElementById('stungun');
+if (stungunBtn){
+  stungunBtn.addEventListener('pointerdown', e => { e.stopPropagation(); handleStunAction(); });
+}
+
+Controls.onEyes = () => { if (started && !dead) setEyes(!eyesClosed); };
+Controls.onBuy = handleStunAction;
+    Controls.onChat = () => {
+        if (started && !dead && document.activeElement !== chatInput) {
+            chatInput.style.display = 'block';
+            chatInput.focus();
+        }
+    };
+Controls.onFire = handleStunAction;
+window.addEventListener('beforeunload', saveCoins);
+// ─── END COINS + STUN GUN ───
+
+requestAnimationFrame(loop);
+</script>
+
+<!-- update-watcher-test 2026-10-29T13:36:18.749998 -->
+</body>
+</html>
