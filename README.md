@@ -5,6 +5,7 @@
 ### Mobile (Touch)
 - **Move:** Use the left on-screen joystick.
 - **Look:** Drag on the screen.
+- **Third Person:** Tap the **3RD VIEW** button to toggle between first and third person.
 - **Close Eyes:** Tap the **CLOSE EYES** button.
 - **Look Back:** Tap the **LOOK BACK** button to turn around.
 - **Chat:** Tap **CHAT** to open the message input.
