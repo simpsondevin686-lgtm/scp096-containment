@@ -13,6 +13,7 @@
 ### PC (Keyboard & Mouse)
 - **Move:** WASD or Arrow Keys.
 - **Look:** Move the mouse or use your laptop's touchpad/mouse pad (click the screen to lock the pointer).
+- **Third Person:** Press **T** to toggle between first and third person.
 - **Turn Around:** Press **Space** to flip your view 180°.
 - **Close/Open Eyes:** Press **E**.
 - **Buy Stun Gun:** Press **B**.
