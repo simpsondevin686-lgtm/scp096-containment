@@ -1,23 +1,21 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
-export const PlayerBody = {
-    mesh: null, torso: null, belt: null, hips: null, neck: null, head: null,
-    legL: null, legR: null, armL: null, armR: null,
-    walkPhase: 0, walkAmount: 0,
-
-    init(scene) {
+export class PlayerBody {
+    constructor(scene, isLocal = false) {
+        this.isLocal = isLocal;
         this.mesh = new THREE.Group();
+        this.walkPhase = 0;
+        this.walkAmount = 0;
         scene.add(this.mesh);
-        window.playerBody = this.mesh; // Bridge for death animations
+        
+        if (this.isLocal) window.playerBody = this.mesh; // Bridge for local death animations
 
-        // Class-D Materials
         const pOrange = new THREE.MeshStandardMaterial({color:0xff6a1a, roughness:0.85, metalness:0.0});
         const pOrangeDark = new THREE.MeshStandardMaterial({color:0xc84a0a, roughness:0.9});
         const pSkin = new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75});
         const pBoot = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.7});
         const pBlack = new THREE.MeshStandardMaterial({color:0x111111, roughness:0.6});
 
-        // Hips & Belt
         this.hips = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.16, 5, 10), pOrange);
         this.hips.position.y = 0.88;
         this.mesh.add(this.hips);
@@ -26,17 +24,14 @@ export const PlayerBody = {
         this.belt.position.y = 0.98;
         this.mesh.add(this.belt);
 
-        // Torso (Chest + Stomach)
         this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
         this.torso.position.y = 1.20;
         this.mesh.add(this.torso);
         
-        // Chest zipper detail
         const zipper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.02), pBlack);
         zipper.position.set(0, 1.20, 0.19);
         this.mesh.add(zipper);
 
-        // Neck & Head
         this.neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1), pSkin);
         this.neck.position.y = 1.45;
         this.mesh.add(this.neck);
@@ -48,13 +43,11 @@ export const PlayerBody = {
         const face = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 12), pSkin);
         this.head.add(face);
         
-        // Add a little black hair/mask detail
         const hair = new THREE.Mesh(new THREE.SphereGeometry(0.155, 12, 12), pBlack);
         hair.scale.set(1, 0.6, 1);
         hair.position.y = 0.08;
         this.head.add(hair);
 
-        // Legs
         const buildLeg = (side) => {
             const hipG = new THREE.Group();
             hipG.position.set(side*0.11, 0.85, 0);
@@ -76,7 +69,6 @@ export const PlayerBody = {
         this.legL = buildLeg(-1);
         this.legR = buildLeg(1);
 
-        // Arms
         const buildArm = (side) => {
             const shoulderG = new THREE.Group();
             shoulderG.position.set(side*0.24, 1.38, 0.05);
@@ -102,64 +94,62 @@ export const PlayerBody = {
         this.armL = buildArm(-1);
         this.armR = buildArm(1);
         
-        // Bridges for animations.js
-        window.pArmL = this.armL;
-        window.pArmR = this.armR;
-    },
+        if (this.isLocal) {
+            window.pArmL = this.armL;
+            window.pArmR = this.armR;
+        }
+    }
 
-    update(dt, player, eyesClosed, dead, deathAnimActive) {
+    update(dt, playerPos, yaw, moveX, moveY, eyesClosed, dead, deathAnimActive) {
         if (dead && deathAnimActive) return;
         
-        const moveMag = dead ? 0 : Math.min(1, Math.hypot(window.Controls.moveX, window.Controls.moveY));
+        const moveMag = dead ? 0 : Math.min(1, Math.hypot(moveX, moveY));
         const targetWalk = moveMag > 0.15 ? Math.min(1, moveMag * 2) : 0;
         this.walkAmount += (targetWalk - this.walkAmount) * (1 - Math.exp(-10 * dt));
 
         const prevPhase = this.walkPhase;
         if (this.walkAmount > 0.1){
             const speedScale = eyesClosed ? 0.6 : 1.0;
-            this.walkPhase += dt * 8 * (0.6 + this.walkAmount * 0.4) * speedScale; // Slightly faster walk cycle
+            this.walkPhase += dt * 8 * (0.6 + this.walkAmount * 0.4) * speedScale; 
         }
-        if (this.walkAmount > 0.3 && !dead){
+        if (this.walkAmount > 0.3 && !dead && this.isLocal){
             if (Math.floor(prevPhase / Math.PI) !== Math.floor(this.walkPhase / Math.PI)){
                 if (window.playerStep) window.playerStep();
             }
         }
 
-        if (eyesClosed || (window.Animations && window.Animations.isSuiciding)) {
+        if (eyesClosed || (this.isLocal && window.Animations && window.Animations.isSuiciding)) {
             this.mesh.visible = false;
             return;
         }
         this.mesh.visible = true;
 
-        const bX = Math.sin(window.Controls.yaw) * 0.4;
-        const bZ = Math.cos(window.Controls.yaw) * 0.4;
-        this.mesh.position.set(player.pos.x + bX, 0, player.pos.z + bZ);
-        this.mesh.rotation.y = window.Controls.yaw;
+        const bX = Math.sin(yaw) * 0.4;
+        const bZ = Math.cos(yaw) * 0.4;
+        this.mesh.position.set(playerPos.x + bX, 0, playerPos.z + bZ);
+        this.mesh.rotation.y = yaw;
 
         const swing    = Math.sin(this.walkPhase);
         const swingOpp = Math.sin(this.walkPhase + Math.PI);
         const cosP     = Math.cos(this.walkPhase);
         const cosOpp   = Math.cos(this.walkPhase + Math.PI);
 
-        // Legs
         this.legL.hipG.rotation.x  = swing * 0.6 * this.walkAmount;
         this.legL.kneeG.rotation.x = -Math.max(0, cosP) * 1.1 * this.walkAmount;
         this.legR.hipG.rotation.x  = swingOpp * 0.6 * this.walkAmount;
         this.legR.kneeG.rotation.x = -Math.max(0, cosOpp) * 1.1 * this.walkAmount;
 
-        // Arms
         this.armL.shoulderG.rotation.x = swingOpp * 0.5 * this.walkAmount;
         this.armR.shoulderG.rotation.x = swing * 0.5 * this.walkAmount;
         this.armL.elbowG.rotation.x = -0.2 - Math.max(0, swingOpp) * 0.4 * this.walkAmount;
         this.armR.elbowG.rotation.x = -0.2 - Math.max(0, swing) * 0.4 * this.walkAmount;
 
-        // Head bob and torso breathing
         const breathe = Math.sin(performance.now() * 0.002) * 0.008;
         this.torso.position.y = 1.20 + breathe;
         this.head.rotation.x = Math.sin(this.walkPhase * 2) * 0.05 * this.walkAmount;
-    },
+    }
 
     reset() {
         if(this.mesh){ this.mesh.rotation.set(0, 0, 0); this.mesh.visible = true; }
     }
-};
+}
