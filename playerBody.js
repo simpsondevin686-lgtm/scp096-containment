@@ -1,7 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
 export const PlayerBody = {
-    mesh: null, torso: null, belt: null, hips: null,
+    mesh: null, torso: null, belt: null, hips: null, neck: null, head: null,
     legL: null, legR: null, armL: null, armR: null,
     walkPhase: 0, walkAmount: 0,
 
@@ -10,56 +10,93 @@ export const PlayerBody = {
         scene.add(this.mesh);
         window.playerBody = this.mesh; // Bridge for death animations
 
+        // Class-D Materials
         const pOrange = new THREE.MeshStandardMaterial({color:0xff6a1a, roughness:0.85, metalness:0.0});
         const pOrangeDark = new THREE.MeshStandardMaterial({color:0xc84a0a, roughness:0.9});
         const pSkin = new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75});
         const pBoot = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.7});
+        const pBlack = new THREE.MeshStandardMaterial({color:0x111111, roughness:0.6});
 
-        this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
-        this.torso.position.y = 1.20;
-        this.mesh.add(this.torso);
-
-        this.belt = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.20, 0.07, 12), pOrangeDark);
-        this.belt.position.y = 0.96;
-        this.mesh.add(this.belt);
-
+        // Hips & Belt
         this.hips = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 0.16, 5, 10), pOrange);
         this.hips.position.y = 0.88;
         this.mesh.add(this.hips);
 
+        this.belt = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 12), pBlack);
+        this.belt.position.y = 0.98;
+        this.mesh.add(this.belt);
+
+        // Torso (Chest + Stomach)
+        this.torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
+        this.torso.position.y = 1.20;
+        this.mesh.add(this.torso);
+        
+        // Chest zipper detail
+        const zipper = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.02), pBlack);
+        zipper.position.set(0, 1.20, 0.19);
+        this.mesh.add(zipper);
+
+        // Neck & Head
+        this.neck = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1), pSkin);
+        this.neck.position.y = 1.45;
+        this.mesh.add(this.neck);
+
+        this.head = new THREE.Group();
+        this.head.position.y = 1.55;
+        this.mesh.add(this.head);
+        
+        const face = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 12), pSkin);
+        this.head.add(face);
+        
+        // Add a little black hair/mask detail
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.155, 12, 12), pBlack);
+        hair.scale.set(1, 0.6, 1);
+        hair.position.y = 0.08;
+        this.head.add(hair);
+
+        // Legs
         const buildLeg = (side) => {
             const hipG = new THREE.Group();
-            hipG.position.set(side*0.10, 0.90, 0);
+            hipG.position.set(side*0.11, 0.85, 0);
             this.mesh.add(hipG);
-            const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.23, 5, 8), pOrange);
-            thigh.position.y = -0.205; hipG.add(thigh);
+            
+            const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.22, 5, 8), pOrange);
+            thigh.position.y = -0.18; hipG.add(thigh);
+            
             const kneeG = new THREE.Group();
-            kneeG.position.y = -0.41; hipG.add(kneeG);
-            const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.29, 5, 8), pOrange);
-            shin.position.y = -0.22; kneeG.add(shin);
-            const foot = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.08, 0.24), pBoot);
-            foot.position.set(0, -0.45, -0.06); kneeG.add(foot);
+            kneeG.position.y = -0.38; hipG.add(kneeG);
+            
+            const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.28, 5, 8), pOrange);
+            shin.position.y = -0.18; kneeG.add(shin);
+            
+            const boot = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.26), pBoot);
+            boot.position.set(0, -0.38, 0.05); kneeG.add(boot);
             return { hipG, kneeG };
         };
         this.legL = buildLeg(-1);
         this.legR = buildLeg(1);
 
+        // Arms
         const buildArm = (side) => {
             const shoulderG = new THREE.Group();
-            shoulderG.position.set(side*0.25, 1.40, 0.1);
-            shoulderG.rotation.z = side * 0.05;
+            shoulderG.position.set(side*0.24, 1.38, 0.05);
             this.mesh.add(shoulderG);
-            const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), pOrange);
-            shoulderG.add(cap);
-            const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.16, 5, 8), pOrange);
-            upper.position.y = -0.15; shoulderG.add(upper);
+            
+            const shoulderPad = new THREE.Mesh(new THREE.SphereGeometry(0.08), pOrangeDark);
+            shoulderG.add(shoulderPad);
+            
+            const bicep = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.15, 5, 8), pOrange);
+            bicep.position.y = -0.14; shoulderG.add(bicep);
+            
             const elbowG = new THREE.Group();
-            elbowG.position.y = -0.30; shoulderG.add(elbowG);
-            const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.15, 5, 8), pOrange);
-            fore.position.y = -0.14; elbowG.add(fore);
-            const hand = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), pSkin);
-            hand.scale.set(1, 1.3, 0.7);
-            hand.position.y = -0.30; elbowG.add(hand);
+            elbowG.position.y = -0.28; shoulderG.add(elbowG);
+            
+            const forearm = new THREE.Mesh(new THREE.CapsuleGeometry(0.055, 0.15, 5, 8), pOrange);
+            forearm.position.y = -0.12; elbowG.add(forearm);
+            
+            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.05), pSkin);
+            hand.position.y = -0.28; elbowG.add(hand);
+            
             return { shoulderG, elbowG };
         };
         this.armL = buildArm(-1);
@@ -80,7 +117,7 @@ export const PlayerBody = {
         const prevPhase = this.walkPhase;
         if (this.walkAmount > 0.1){
             const speedScale = eyesClosed ? 0.6 : 1.0;
-            this.walkPhase += dt * 7 * (0.6 + this.walkAmount * 0.4) * speedScale;
+            this.walkPhase += dt * 8 * (0.6 + this.walkAmount * 0.4) * speedScale; // Slightly faster walk cycle
         }
         if (this.walkAmount > 0.3 && !dead){
             if (Math.floor(prevPhase / Math.PI) !== Math.floor(this.walkPhase / Math.PI)){
@@ -104,18 +141,22 @@ export const PlayerBody = {
         const cosP     = Math.cos(this.walkPhase);
         const cosOpp   = Math.cos(this.walkPhase + Math.PI);
 
-        this.legL.hipG.rotation.x  = swing * 0.5 * this.walkAmount;
-        this.legL.kneeG.rotation.x = -Math.max(0, cosP) * 0.9 * this.walkAmount;
-        this.legR.hipG.rotation.x  = swingOpp * 0.5 * this.walkAmount;
-        this.legR.kneeG.rotation.x = -Math.max(0, cosOpp) * 0.9 * this.walkAmount;
+        // Legs
+        this.legL.hipG.rotation.x  = swing * 0.6 * this.walkAmount;
+        this.legL.kneeG.rotation.x = -Math.max(0, cosP) * 1.1 * this.walkAmount;
+        this.legR.hipG.rotation.x  = swingOpp * 0.6 * this.walkAmount;
+        this.legR.kneeG.rotation.x = -Math.max(0, cosOpp) * 1.1 * this.walkAmount;
 
-        this.armL.shoulderG.rotation.x = swingOpp * 0.35 * this.walkAmount;
-        this.armR.shoulderG.rotation.x = swing * 0.35 * this.walkAmount;
-        this.armL.elbowG.rotation.x = -0.12 - Math.max(0, swingOpp) * 0.3 * this.walkAmount;
-        this.armR.elbowG.rotation.x = -0.12 - Math.max(0, swing) * 0.3 * this.walkAmount;
+        // Arms
+        this.armL.shoulderG.rotation.x = swingOpp * 0.5 * this.walkAmount;
+        this.armR.shoulderG.rotation.x = swing * 0.5 * this.walkAmount;
+        this.armL.elbowG.rotation.x = -0.2 - Math.max(0, swingOpp) * 0.4 * this.walkAmount;
+        this.armR.elbowG.rotation.x = -0.2 - Math.max(0, swing) * 0.4 * this.walkAmount;
 
-        const breathe = Math.sin(performance.now() * 0.0015) * 0.006;
+        // Head bob and torso breathing
+        const breathe = Math.sin(performance.now() * 0.002) * 0.008;
         this.torso.position.y = 1.20 + breathe;
+        this.head.rotation.x = Math.sin(this.walkPhase * 2) * 0.05 * this.walkAmount;
     },
 
     reset() {
