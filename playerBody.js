@@ -119,7 +119,10 @@ export class PlayerBody {
             }
         }
 
-        if (eyesClosed || (this.isLocal && window.Animations && window.Animations.isSuiciding)) {
+        // Hide body if eyes are closed, suiciding, or if the local player is using LOOK BACK
+        if (eyesClosed || 
+            (this.isLocal && window.Controls.flipOffset !== 0) || 
+            (this.isLocal && window.Animations && window.Animations.isSuiciding)) {
             this.mesh.visible = false;
             return;
         }
