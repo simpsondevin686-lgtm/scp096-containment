@@ -7,7 +7,7 @@ export const World = {
   room: null, door: null, wallGapPanelL: null, wallGapPanelR: null,
   doorState: 'closed', wallGapState: 'closed',
   pathTiles: [], playerTileIdx: 0, corridorSegs: [], corridorFill: null,
-  mainLight: null, doorLight: null,
+  mainLight: null, doorLight: null, wallButton: null, wallButtonLight: null,
 
   init(scene) {
     this.room = new THREE.Group();
@@ -97,6 +97,14 @@ export const World = {
 
     this.door = new THREE.Mesh(new THREE.BoxGeometry(2.4, 3.2, 0.35), matMetal);
     this.door.position.set(0, 1.6, -this.ROOM/2); this.room.add(this.door);
+
+    // Wall Button (Inside cell)
+    this.wallButton = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 0.1), matMetal);
+    this.wallButton.position.set(1.5, 1.5, -this.ROOM/2 + 0.2);
+    this.room.add(this.wallButton);
+    this.wallButtonLight = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.05), new THREE.MeshBasicMaterial({color:0xff0000}));
+    this.wallButtonLight.position.set(1.5, 1.5, -this.ROOM/2 + 0.26);
+    this.room.add(this.wallButtonLight);
     for(const side of [-1, 1]){
       const zTrim = -this.ROOM/2 + side * 0.24;
       for(const s of [-1,1]){
@@ -156,6 +164,12 @@ export const World = {
   },
 
   update(dt, player, Brain) {
+    if (this.doorState === 'opening') {
+        this.wallButtonLight.material.color.setHex(0x00ff00);
+    } else if (this.doorState === 'closed' || this.doorState === 'locked') {
+        this.wallButtonLight.material.color.setHex(0xff0000);
+    }
+
     if (this.doorState === 'closed') {
       const distToDoor = Math.hypot(player.pos.x, player.pos.z - (-this.ROOM/2));
       if (player.pos.z < -this.ROOM/2 - 0.4 && distToDoor < 3.0) {
