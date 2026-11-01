@@ -882,13 +882,13 @@ function setEyes(closed){
     scene.background = BLACK;
     scene.fog = null;
     World.room.visible = false;
-    PlayerBody.mesh.visible = false;
+    if(window.playerBody) window.playerBody.visible = false;
     swapSCPMaterial(true);
   } else {
     scene.background = new THREE.Color(0x05070a);
     scene.fog = FOG;
     World.room.visible = true;
-    PlayerBody.mesh.visible = true;
+    if(window.playerBody) window.playerBody.visible = true;
     swapSCPMaterial(false);
   }
 }
@@ -1198,7 +1198,7 @@ function resetGame(){
 
   deathAnim.active = false;
   deathAnim.t = 0;
-  if(playerBody){ playerBody.rotation.set(0, 0, 0); PlayerBody.mesh.visible = true; }
+  if(playerBody){ playerBody.rotation.set(0, 0, 0); if(window.playerBody) window.playerBody.visible = true; }
   for(const id in Network.remotePlayers){
     const rp = Network.remotePlayers[id];
     if(rp.data) rp.data.deathAnim = null;
@@ -1295,12 +1295,12 @@ function updateCamera(){
       camera.position.addScaledVector(forward, -4.0);
       camera.position.y += 1.5;
       camera.lookAt(player.pos.x, player.pos.y + 1.0, player.pos.z);
-      PlayerBody.mesh.visible = true;
+      if(window.playerBody) window.playerBody.visible = true;
   } else {
       camera.position.copy(player.pos);
       camera.rotation.y = Controls.yaw + Controls.flipOffset;
       camera.rotation.x = Controls.pitch;
-      if (eyesClosed) PlayerBody.mesh.visible = false;
+      if (eyesClosed) if(window.playerBody) window.playerBody.visible = false;
   }
   camera.updateMatrixWorld();
 }
