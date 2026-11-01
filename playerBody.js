@@ -96,6 +96,7 @@ export class PlayerBody {
         
         if (this.isLocal) {
             window.pArmL = this.armL;
+            window.playerHead = this.head;
             window.pArmR = this.armR;
         }
     }
