@@ -183,7 +183,7 @@ import { Network } from './network.js';
 import { Entities } from './entities.js';
 window.Entities = Entities;
 import { World } from './world.js';
-import { PlayerBody } from './playerBody.js';
+import { PlayerBody } from './playerBody.js?v=3';
 
 window.onNetworkReady = (isHost) => {
     const hud = document.getElementById('hud');
@@ -346,7 +346,7 @@ World.init(scene);
 
 Entities.init(scene);
 
-window.PlayerBody = new PlayerBody(scene, true);
+window.LocalBody = new PlayerBody(scene, true);
 
 let walkPhase = 0;
 let walkAmount = 0;
@@ -1639,7 +1639,7 @@ function loop(now){
       updateDeathAnim(dt);
     } else {
       updatePlayer(dt);
-      PlayerBody.update(dt, player.pos, Controls.yaw, Controls.moveX, Controls.moveY, eyesClosed, dead, deathAnim.active);
+      window.LocalBody.update(dt, player.pos, Controls.yaw, Controls.moveX, Controls.moveY, eyesClosed, dead, deathAnim.active);
       
       updateCamera();
     }
