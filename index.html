@@ -198,28 +198,8 @@ window.handleData = (data, senderConn) => {
     if (data.type === 'state') {
         if (data.id === Network.myId) return;
         if (!Network.remotePlayers[data.id]) {
-            const mesh = new THREE.Group();
-            const pOrange = new THREE.MeshStandardMaterial({color:0xff6a1a, roughness:0.85});
-            const pSkin = new THREE.MeshStandardMaterial({color:0xd9a884, roughness:0.75});
-            const pBoot = new THREE.MeshStandardMaterial({color:0x1a1a1a, roughness:0.7});
-            const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.32, 6, 12), pOrange);
-            torso.position.y = 1.20; mesh.add(torso);
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), pSkin);
-            head.position.y = 1.55; mesh.add(head);
-            const armL = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 4, 8), pOrange);
-            armL.position.set(-0.25, 1.2, 0); armL.rotation.z = 0.1; mesh.add(armL);
-            const armR = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.4, 4, 8), pOrange);
-            armR.position.set(0.25, 1.2, 0); armR.rotation.z = -0.1; mesh.add(armR);
-            const legL = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pOrange);
-            legL.position.set(-0.1, 0.6, 0); mesh.add(legL);
-            const legR = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.4, 4, 8), pOrange);
-            legR.position.set(0.1, 0.6, 0); mesh.add(legR);
-            const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.25), pBoot);
-            bootL.position.set(-0.1, 0.2, -0.05); mesh.add(bootL);
-            const bootR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.25), pBoot);
-            bootR.position.set(0.1, 0.2, -0.05); mesh.add(bootR);
-            scene.add(mesh);
-            Network.remotePlayers[data.id] = { mesh, data: {} };
+            const body = new PlayerBody(scene, false);
+            Network.remotePlayers[data.id] = { mesh: body.mesh, body: body, data: {} };
         }
         Network.remotePlayers[data.id].data = data;
         
@@ -366,7 +346,7 @@ World.init(scene);
 
 Entities.init(scene);
 
-PlayerBody.init(scene);
+window.PlayerBody = new PlayerBody(scene, true);
 
 let walkPhase = 0;
 let walkAmount = 0;
@@ -1659,7 +1639,7 @@ function loop(now){
       updateDeathAnim(dt);
     } else {
       updatePlayer(dt);
-      PlayerBody.update(dt, player, eyesClosed, dead, deathAnim.active);
+      PlayerBody.update(dt, player.pos, Controls.yaw, Controls.moveX, Controls.moveY, eyesClosed, dead, deathAnim.active);
       
       updateCamera();
     }
@@ -1763,7 +1743,10 @@ function loop(now){
           rp.mesh.position.lerp(new THREE.Vector3(d.px, 0, d.pz), 1 - Math.exp(-15 * dt));
           rp.mesh.rotation.z = 0;
       }
-      rp.mesh.rotation.y = d.yaw;
+      if (rp.body) {
+          const isMoving = (d.px !== rp.mesh.position.x || d.pz !== rp.mesh.position.z);
+          rp.body.update(dt, rp.mesh.position, d.yaw || 0, isMoving ? 1 : 0, 0, false, d.dead, false);
+      }
   }
 
   const flick = Math.sin(elapsed*27.3) * 2.2
