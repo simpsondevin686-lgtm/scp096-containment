@@ -64,9 +64,15 @@ export const World = {
       const seg = new THREE.Group();
       const obsMat = new THREE.MeshStandardMaterial({color:0xff5500, roughness:0.6, emissive:0x441100, emissiveIntensity:0.5});
       const obs = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 1.2), obsMat);
-      obs.position.set(0, 0.75, this.TILE_LEN/2);
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const ox = side * (this.CORRIDOR_HALF_W - 0.8);
+      const oz = this.TILE_LEN/2 + (Math.random() - 0.5) * 6.0;
+      obs.position.set(ox, 0.75, oz);
       seg.add(obs);
       seg.userData.obstacle = obs;
+      seg.userData.hasObstacle = (Math.random() > 0.75);
+      seg.userData.obsX = ox;
+      seg.userData.obsZ = oz;
       const fl = new THREE.Mesh(new THREE.PlaneGeometry(this.CORRIDOR_HALF_W*2, this.TILE_LEN), matFloor);
       fl.rotation.x = -Math.PI/2; fl.position.set(0, 0.02, this.TILE_LEN/2); seg.add(fl);
       const cl = new THREE.Mesh(new THREE.PlaneGeometry(this.CORRIDOR_HALF_W*2, this.TILE_LEN), matCeil);
@@ -295,12 +301,10 @@ export const World = {
       if (tileIdx >= 0 && tileIdx < this.pathTiles.length) {
         if (seg.userData.tileIdx !== tileIdx) {
             seg.userData.tileIdx = tileIdx;
-            // Only spawn 25% of the time
-            seg.userData.obstacle.visible = (Math.random() > 0.75); 
-            // Push them towards the left or right walls, leaving the middle clear
-            const side = Math.random() > 0.5 ? 1 : -1;
-            seg.userData.obstacle.position.x = side * (this.CORRIDOR_HALF_W - 0.8);
-            seg.userData.obstacle.position.z = this.TILE_LEN/2 + (Math.random() - 0.5) * 6.0;
+            // Keep them exactly where they were placed during init()
+            seg.userData.obstacle.visible = seg.userData.hasObstacle;
+            seg.userData.obstacle.position.x = seg.userData.obsX;
+            seg.userData.obstacle.position.z = seg.userData.obsZ;
         }
         const t = this.pathTiles[tileIdx], tLen = t.len || this.TILE_LEN;
         seg.visible = true;
